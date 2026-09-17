@@ -1,0 +1,12 @@
+.bm-late-page { padding: 12px; font: 13px system-ui, sans-serif; }
+.bm-status { font: 12px monospace; }
+.bm-late__filler { display: flex; flex-wrap: wrap; gap: 2px; max-height: 240px; overflow: auto; }
+.bm-filler-cell { font: 11px monospace; padding: 0 3px; background: #f6f6f6; }
+.bm-late__slot { margin-top: 12px; min-height: 40px; }
+.bm-late__target { font: 13px system-ui, sans-serif; padding: 4px 10px; }
+/* display:none rather than visibility/opacity: Playwright treats zero-area boxes
+   as not visible, and display:none is the variant that actually removes layout. */
+.bm-hidden { display: none; }
+/* Never settles until the class is removed, so the stability gate keeps failing. */
+.bm-drifting { position: relative; animation: bm-drift 600ms linear infinite; }
+@keyframes bm-drift { from { left: 0; } 50% { left: 40px; } to { left: 0; } }

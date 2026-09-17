@@ -1,0 +1,44 @@
+# Checks the things that can be checked without timing anything.
+#
+# Deliberately does not run the benchmark - see pages.yml for why CI is the wrong
+# place to measure. This only proves the app builds and the harness typechecks, so
+# a broken matrix or a broken app is caught before someone spends 45 minutes on a
+# run that was never going to be valid.
+name: Verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Pinned through .nvmrc so CI and local development cannot drift. Angular 22
+      # requires ^22.22.3, and a 22.22.2 runner fails at install rather than at
+      # build, which is a confusing place to discover a version floor.
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm --prefix app ci
+
+      - name: Typecheck harness and scenarios
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Build the application
+        run: npm run app:build
+
+      - name: Analysis scripts parse
+        run: |
+          for f in analysis/*.mjs tools/*.mjs; do node --check "$f"; done
+
+      - name: Strategy reference regenerates and matches what is committed
+        run: |
+          npm run reference
+          git diff --exit-code docs/LOCATOR-REFERENCE.md \
+            || { echo "::error::docs/LOCATOR-REFERENCE.md is stale. Run 'npm run reference' and commit."; exit 1; }

@@ -1,0 +1,36 @@
+<section class="bm-late-page">
+  <h1>Late content — mode {{ mode() }}, delay {{ params.delay() }}ms</h1>
+  <p class="bm-status">
+    arrived: <span data-testid="status.arrived">{{ arrived() }}</span>
+    / last: <span data-testid="status.last-clicked.value">{{ log.last() }}</span>
+  </p>
+
+  <!-- Background noise so a failing poll has a realistically sized DOM to scan. -->
+  <div class="bm-late__filler" data-testid="late.filler">
+    @for (i of filler(); track i) {
+      <span class="bm-filler-cell" [attr.data-row]="i">n{{ i }}</span>
+    }
+  </div>
+
+  <div class="bm-late__slot" data-testid="late.slot">
+    @switch (mode()) {
+      @case ('append') {
+        @if (arrived()) {
+          <button type="button" class="bm-late__target" [bmTarget]="spec" (click)="onClick()">Submit</button>
+        }
+      }
+      @case ('visible') {
+        <button type="button" class="bm-late__target" [class.bm-hidden]="!arrived()"
+                [bmTarget]="spec" (click)="onClick()">Submit</button>
+      }
+      @case ('enabled') {
+        <button type="button" class="bm-late__target" [disabled]="!arrived()"
+                [bmTarget]="spec" (click)="onClick()">Submit</button>
+      }
+      @case ('stable') {
+        <button type="button" class="bm-late__target" [class.bm-drifting]="!arrived()"
+                [bmTarget]="spec" (click)="onClick()">Submit</button>
+      }
+    }
+  </div>
+</section>

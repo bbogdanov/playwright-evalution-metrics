@@ -1,0 +1,54 @@
+<section class="bm-mat-page">
+  <h1>Material overlays — {{ cards().length }} cards, {{ optionCount() }} options each</h1>
+  <p class="bm-status">
+    last: <span data-testid="status.last-clicked.value">{{ log.last() }}</span>
+  </p>
+
+  <div class="bm-mat__actions">
+    <button mat-flat-button type="button" data-testid="mat.open-dialog" (click)="openDialog()">
+      Open dialog
+    </button>
+
+    <button mat-stroked-button type="button" data-testid="mat.menu-trigger" [matMenuTriggerFor]="menu">
+      Open menu
+    </button>
+    <mat-menu #menu="matMenu">
+      @for (o of options(); track o.i) {
+        <button mat-menu-item type="button" [attr.data-testid]="'menu.item.' + o.i"
+                (click)="record('menu-' + o.i)">{{ copy.t(o.key) }} {{ o.i }}</button>
+      }
+    </mat-menu>
+  </div>
+
+  <div class="bm-mat__cards" data-testid="mat.cards">
+    @for (i of cards(); track i) {
+      <!-- The card is a real ancestor of the trigger, but NOT of the panel the
+           trigger opens. Scoping a locator to this card cannot reach the options. -->
+      <div class="bm-mat-card" [attr.data-testid]="'mat-card.' + i">
+        <mat-form-field appearance="outline" class="bm-mat-card__field">
+          <mat-label>{{ copy.t('segment') }} {{ i }}</mat-label>
+          <mat-select [attr.data-testid]="'select.' + i" (selectionChange)="record('select-' + i)">
+            @for (o of options(); track o.i) {
+              <mat-option [value]="o.i">{{ copy.t(o.key) }} {{ o.i }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    }
+  </div>
+
+  <table mat-table [dataSource]="tableRows()" class="bm-mat__table" data-testid="mat.table">
+    <ng-container matColumnDef="r">
+      <th mat-header-cell *matHeaderCellDef>#</th>
+      <td mat-cell *matCellDef="let row" [attr.data-testid]="'mrow.' + row.r">{{ row.r }}</td>
+    </ng-container>
+    @for (c of [0, 1, 2]; track c) {
+      <ng-container [matColumnDef]="'c' + c">
+        <th mat-header-cell *matHeaderCellDef>{{ copy.t(columnKeyFor(c)) }}</th>
+        <td mat-cell *matCellDef="let row">{{ row.values[c] }}</td>
+      </ng-container>
+    }
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+</section>

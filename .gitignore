@@ -1,0 +1,11 @@
+node_modules/
+app/node_modules/
+app/dist/
+app/.angular/
+results/raw/
+
+test-results/
+playwright-report/
+blob-report/
+.env
+*.log

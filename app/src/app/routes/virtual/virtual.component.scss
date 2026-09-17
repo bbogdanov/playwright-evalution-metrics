@@ -1,0 +1,6 @@
+.bm-virtual-page { padding: 12px; font: 13px system-ui, sans-serif; }
+.bm-status { font: 12px monospace; }
+.bm-viewport { height: 480px; width: 360px; border: 1px solid #ddd; }
+.bm-viewport--plain { overflow: auto; }
+.bm-vrow { height: 24px; display: flex; align-items: center; }
+.bm-vrow__btn { font: 12px monospace; border: 0; background: transparent; cursor: pointer; }

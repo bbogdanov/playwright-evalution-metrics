@@ -1,0 +1,40 @@
+<section class="bm-forms-page">
+  <h1>Reactive form — {{ fields().length }} fields</h1>
+  <p class="bm-status">
+    last: <span data-testid="status.last-clicked.value">{{ log.last() }}</span>
+  </p>
+
+  <form class="bm-form" data-testid="form.root" (submit)="$event.preventDefault()">
+    @for (i of fields(); track i) {
+      <div class="bm-field" [attr.data-field]="i">
+        @switch (assoc(i)) {
+          @case ('for') {
+            <!-- Classic explicit association. -->
+            <label class="bm-field__label" [attr.for]="fieldId(i)">{{ labelText(i) }}</label>
+            <input class="bm-field__input" type="text" [bmTarget]="spec(i)"
+                   [attr.placeholder]="'Enter ' + labelText(i)"
+                   (input)="onInput(i)" />
+          }
+          @case ('wrapped') {
+            <!-- Implicit association: the control is inside the label. -->
+            <label class="bm-field__label bm-field__label--wrapped">
+              {{ labelText(i) }}
+              <input class="bm-field__input" type="text" [bmTarget]="spec(i)"
+                     [attr.placeholder]="'Enter ' + labelText(i)"
+                     (input)="onInput(i)" />
+            </label>
+          }
+          @case ('labelledby') {
+            <!-- Indirect association through aria-labelledby. -->
+            <span class="bm-field__label" [attr.id]="'lbl-' + i">{{ labelText(i) }}</span>
+            <input class="bm-field__input" type="text" [bmTarget]="spec(i)"
+                   [attr.aria-labelledby]="'lbl-' + i"
+                   [attr.placeholder]="'Enter ' + labelText(i)"
+                   (input)="onInput(i)" />
+          }
+        }
+      </div>
+    }
+    <button type="submit" class="bm-form__submit" data-testid="form.submit">{{ copy.t('submit') }}</button>
+  </form>
+</section>

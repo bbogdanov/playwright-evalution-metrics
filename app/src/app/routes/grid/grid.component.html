@@ -1,0 +1,44 @@
+<section class="bm-grid-page">
+  <header class="bm-grid-page__header">
+    <h1 class="bm-grid-page__title">Flat data grid</h1>
+    <p class="bm-status" data-testid="status.last-clicked">
+      last: <span data-testid="status.last-clicked.value">{{ lastClicked() }}</span>
+      / count: <span data-testid="status.click-count">{{ clickCount() }}</span>
+    </p>
+  </header>
+
+  <table class="bm-grid">
+    <thead>
+      <tr class="bm-grid__head-row">
+        <th scope="col" class="bm-grid__head" data-testid="head.index">#</th>
+        @for (c of colOrder(); track c) {
+          <th scope="col" class="bm-grid__head" [attr.data-col]="c"
+              [attr.data-testid]="'head.' + columnKey(c)">{{ copy.t(columnKey(c)) }}</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.r) {
+        <!-- Addressable row container: without one, container-scoped strategies
+             are simply not applicable here and drop out of the comparison. -->
+        <tr class="bm-grid__row" [attr.data-row]="row.r"
+            [attr.data-testid]="'row.' + row.r">
+          <th scope="row" class="bm-grid__rowhead" [bmTarget]="rowSpec(row.r)">
+            {{ copy.t('rowLabel') }} {{ row.r }}
+          </th>
+          @for (c of colOrder(); track c) {
+            <td class="bm-grid__cellwrap">
+              <bm-wrap>
+                <ng-template>
+                  <button type="button" class="bm-grid__cell"
+                          [bmTarget]="spec(row.r, c)"
+                          (click)="onClick('cell-r' + row.r + '-c' + c)">{{ row.values[c] }}</button>
+                </ng-template>
+              </bm-wrap>
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>

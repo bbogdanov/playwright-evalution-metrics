@@ -1,0 +1,284 @@
+/**
+ * Generates docs/LOCATOR-REFERENCE.md: what every strategy in the matrix actually
+ * executes, and what it cost.
+ *
+ * Generated rather than hand-written, for one reason: a hand-written table of 31
+ * locators goes stale the first time someone adds a strategy, and a stale
+ * reference is worse than none because it is quoted with confidence.
+ *
+ * The calls are not transcribed by hand either. A recording proxy stands in for
+ * the Page, so what prints is the real call chain produced by each strategy's
+ * own build() function with real arguments. If the implementation changes, this
+ * file changes with it.
+ *
+ * Measurements are merged in from results/summary.json when one exists; without
+ * it the reference still renders, just without the cost columns.
+ */
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { STRATEGIES } from '../e2e/locators/strategies.ts';
+
+const OUT = resolve(process.env.BM_REFERENCE ?? 'docs/LOCATOR-REFERENCE.md');
+const SUMMARY = resolve('results/summary.json');
+
+// --- rendering the real call ------------------------------------------------
+const isRec = (v) =>
+  v !== null && (typeof v === 'object' || typeof v === 'function') && v.__path;
+
+const fmt = (v) => {
+  if (isRec(v)) return v.__path;
+  if (typeof v === 'string') return JSON.stringify(v);
+  if (v && typeof v === 'object') {
+    return '{ ' + Object.entries(v).map(([k, x]) => `${k}: ${fmt(x)}`).join(', ') + ' }';
+  }
+  return String(v);
+};
+
+const recorder = (path) =>
+  new Proxy(function () {}, {
+    get(_t, prop) {
+      if (prop === '__path') return path;
+      if (typeof prop !== 'string' || prop === 'then') return undefined;
+      return (...args) => recorder(`${path}.${prop}(${args.map(fmt).join(', ')})`);
+    },
+  });
+
+/**
+ * A representative target: a grid cell at row 750, column 2, exactly as the
+ * benchmark app renders it. Concrete values rather than placeholders, because
+ * "getByRole(role, {name})" hides the thing a reader needs to see.
+ */
+const TARGET = {
+  found: true, tag: 'button', role: 'button',
+  domId: 'cell-r750-c2', testIdAttr: 'data-testid', testId: 'cell.750.2',
+  qaId: 'ebc69256', accessibleName: 'Status for row 750', text: 'status-750-2-ft8o',
+  kind: 'cell', row: '750', col: '2',
+  semanticClass: 'bm-cell', variantClass: 'bm-cell--v2', hashedClass: '_a854d9',
+  cssChain: 'tr.bm-grid__row > td.bm-grid__cellwrap > button.bm-grid__cell.bm-cell.bm-cell--v2._a854d9',
+  cssChainScoped: 'td.bm-grid__cellwrap > button.bm-grid__cell',
+  xpathAbs: '/html/body/app-root/bm-grid/section/table/tbody/tr[751]/td[3]/button',
+  xpathRel: '//button[@aria-label="Status for row 750"]',
+  nthOfClass: 4502, nthOfRole: 4502, classMatchCount: 9000,
+  scopeTestId: 'row.750', inShadowRoot: false,
+  depth: 9, shadowHops: 0, siblingCount: 1,
+  ancestorTags: 'app-root>bm-grid>section>table>tbody>tr>td>button',
+};
+
+const FAMILY_TITLES = {
+  identity: 'Identity — id, test id, generated unique attribute',
+  attribute: 'Attribute — other attribute-based addressing',
+  class: 'Class — semantic or build-hashed',
+  structural: 'Structural — ancestry and position',
+  role: 'Role — the accessibility tree',
+  text: 'Text — visible copy',
+  filter: 'Filter — relational, a subquery or a layout read per candidate',
+  composite: 'Composite — scoping, chaining, mixed engines',
+};
+
+const FAMILY_NOTES = {
+  identity: 'A single attribute lookup. Nothing in this family depends on page size, copy, structure or styling.',
+  attribute: 'Also a single lookup, but uniqueness depends on the data rather than on a deliberate identifier.',
+  class: 'A class scan. Unique only for as long as exactly one element carries the class, which is rarely a property anyone is maintaining.',
+  structural: 'Depends on where the element sits. Survives copy changes; does not survive someone adding a wrapper or reordering siblings.',
+  role: 'Computes an accessible name for every element of that role, matched or not. No DOM API does this, so there is no native floor to compare against — that absence is the explanation for the cost.',
+  text: 'Walks text nodes and normalises whitespace. Cost scales with the amount of text on the page, not with the number of elements.',
+  filter: 'Runs a subquery, a text scan or a layout read per candidate. Cost is the product of two counts, which is why this family produces the pathological numbers.',
+  composite: 'Combines the above. Scoping narrows the candidate set before the expensive part; chaining does the opposite.',
+};
+
+function loadSummary() {
+  try {
+    return JSON.parse(readFileSync(SUMMARY, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+const fmtMs = (v) =>
+  v === null || v === undefined || !Number.isFinite(v)
+    ? '—'
+    : v >= 1000 ? `${(v / 1000).toFixed(2)} s`
+    : v >= 1 ? `${v.toFixed(2)} ms`
+    : `${v.toFixed(3)} ms`;
+
+const pct = (v) => (v === null || v === undefined || !Number.isFinite(v) ? 'n/a' : `${Math.round(v * 100)}%`);
+
+function main() {
+  const summary = loadSummary();
+  const byId = new Map((summary?.composite ?? []).map((r) => [r.strategyId, r]));
+  const env = summary?.envs?.[0] ?? null;
+
+  const out = [];
+  out.push('# Locator reference');
+  out.push('');
+  out.push('What every strategy in the benchmark matrix actually executes, and what it cost.');
+  out.push('');
+  out.push('Generated by `npm run reference`. The calls are produced by running each');
+  out.push("strategy's own `build()` function against a recording stand-in for the Page, so");
+  out.push('they are the real call chains rather than a transcription — if the');
+  out.push('implementation changes, this file changes with it.');
+  out.push('');
+  out.push('The example target is a grid cell at row 750, column 2, as the benchmark app');
+  out.push('renders it:');
+  out.push('');
+  out.push('```html');
+  out.push('<button id="cell-r750-c2" data-testid="cell.750.2" data-qa="ebc69256"');
+  out.push('        class="bm-grid__cell bm-cell bm-cell--v2 _a854d9"');
+  out.push('        aria-label="Status for row 750" title="Status for row 750"');
+  out.push('        data-kind="cell" data-row="750" data-col="2">status-750-2-ft8o</button>');
+  out.push('```');
+  out.push('');
+
+  if (summary && env) {
+    out.push('## Measurement context');
+    out.push('');
+    out.push(`- **Machine**: ${env.cpuModel} ×${env.cpuCount}, load ${env.loadAvg1}`);
+    out.push(`- **Toolchain**: Playwright ${env.playwrightVersion}, Chromium ${env.browserVersion}, Node ${env.node}`);
+    out.push(`- **Page**: largest tier measured (\`${summary.largestTier}\`), ~120,000 DOM elements, target at depth ${TARGET.depth}`);
+    out.push(`- **Noise floor**: ${fmtMs(summary.globalNoiseFloorMs)} — differences smaller than this are not differences`);
+    if (summary.typicalActionMs) {
+      out.push(`- **For scale**: a click on a quiet page costs ${fmtMs(summary.typicalActionMs)}`);
+    }
+    if (env.browserRevisionMatched === false && env.notes?.length) {
+      out.push(`- **Caveat**: ${env.notes[0]}`);
+    }
+    out.push('');
+    out.push('Costs are medians, net of a paired baseline. They are valid for this machine');
+    out.push('only — a faster machine moves every number, and the ratios matter more than the');
+    out.push('absolutes.');
+    out.push('');
+  } else {
+    out.push('> No `results/summary.json` found, so cost columns are omitted.');
+    out.push('> Run `npm run bench && npm run analyze`, then regenerate.');
+    out.push('');
+  }
+
+  const families = [...new Set(STRATEGIES.map((s) => s.family))];
+  for (const family of families) {
+    out.push(`## ${FAMILY_TITLES[family] ?? family}`);
+    out.push('');
+    if (FAMILY_NOTES[family]) {
+      out.push(FAMILY_NOTES[family]);
+      out.push('');
+    }
+
+    const rows = STRATEGIES.filter((s) => s.family === family).map((s) => {
+      const call = s.build(recorder('page'), TARGET).__path;
+      const m = byId.get(s.id);
+      return { s, call, m, cost: m?.speedMs ?? null, atFloor: m?.speedAtFloor };
+    });
+    rows.sort((a, b) => (a.cost ?? Infinity) - (b.cost ?? Infinity));
+
+    if (summary) {
+      out.push('| Strategy | Call | Cost | Survives change | Stays unique |');
+      out.push('|---|---|---|---|---|');
+      for (const r of rows) {
+        const cost = r.cost === null ? '—' : `${fmtMs(r.cost)}${r.atFloor ? ' *(at floor)*' : ''}`;
+        out.push(
+          `| \`${r.s.id}\` | \`${r.call}\` | ${cost} | ${pct(r.m?.robustness)} | ${pct(r.m?.strictness)} |`,
+        );
+      }
+    } else {
+      out.push('| Strategy | Call | What it asks the browser to do |');
+      out.push('|---|---|---|');
+      for (const r of rows) {
+        out.push(`| \`${r.s.id}\` | \`${r.call}\` | ${r.s.note} |`);
+      }
+    }
+    out.push('');
+  }
+
+  if (summary) {
+    out.push('## What each one is for');
+    out.push('');
+    out.push('| Strategy | What it asks the browser to do |');
+    out.push('|---|---|');
+    for (const s of STRATEGIES) out.push(`| \`${s.id}\` | ${s.note} |`);
+    out.push('');
+  }
+
+  const mech = summary?.mechanism ?? {};
+  const layoutHeavy = Object.entries(mech).filter(([, m]) => m.forcedLayoutsPerQuery > 0);
+  if (Object.keys(mech).length) {
+    out.push('## What the work actually is');
+    out.push('');
+    out.push('Timings tell you which locators are slow. These numbers come from a Chrome');
+    out.push('trace and tell you *why*, by counting the timeline events a query produces');
+    out.push('rather than measuring how long it runs. Counts are a property of the engine, so');
+    out.push('they hold on any machine and at any page size — which is why this is measured on');
+    out.push('a small tier and never fed into the timing analysis.');
+    out.push('');
+    if (layoutHeavy.length) {
+      out.push('| Strategy | Candidates | Forced layouts / query | Per candidate |');
+      out.push('|---|---|---|---|');
+      for (const [id, m] of layoutHeavy.sort((a, b) => b[1].forcedLayoutsPerQuery - a[1].forcedLayoutsPerQuery)) {
+        out.push(
+          `| \`${id}\` | ${m.matches} | ${m.forcedLayoutsPerQuery.toFixed(0)} | ` +
+          `**${m.layoutsPerCandidate === null ? '—' : m.layoutsPerCandidate.toFixed(2)}** |`,
+        );
+      }
+      out.push('');
+      out.push('Every other strategy in the matrix forces zero. So `:visible` is not "somewhat');
+      out.push('more expensive" — it reads layout once for every element it considers, and that');
+      out.push('is counted here, not inferred from the shape of a timing curve.');
+      out.push('');
+    }
+    // Garbage-collection time was recorded hoping it would evidence per-candidate
+    // string building in the role and text engines. It does not. GC is not
+    // attributed to whatever caused the allocation, and the measured figures put
+    // a bare id lookup in the same band as a full-document text scan - so the
+    // honest report is that this line of evidence came back empty, not a table
+    // that looks like support if nobody checks it.
+    const gc = Object.entries(mech)
+      .filter(([, m]) => Number.isFinite(m.gcMsPerQuery))
+      .sort((a, b) => b[1].gcMsPerQuery - a[1].gcMsPerQuery);
+    const cheap = gc.find(([id]) => id === 'id.engine' || id === 'id.css');
+    if (gc.length && cheap) {
+      out.push('Garbage-collection time was also recorded, to test whether the role and text');
+      out.push('engines show allocation pressure from building strings per candidate. **It does');
+      out.push(`not separate them.** The heaviest reading is \`${gc[0][0]}\` at`);
+      out.push(`${gc[0][1].gcMsPerQuery.toFixed(2)} ms/query, but \`${cheap[0]}\` — an id lookup that`);
+      out.push(`touches one element — reads ${cheap[1].gcMsPerQuery.toFixed(2)} ms/query, which is the same`);
+      out.push('band. GC is not attributed to whatever caused the allocation, so these numbers');
+      out.push('carry no signal about which locator did the work. Recorded and reported as a');
+      out.push('dead end rather than dressed up as support.');
+      out.push('');
+    }
+  }
+
+  out.push('## Reading the numbers');
+  out.push('');
+  out.push('**"At floor" is not "free".** It means the query costs less than the round-trip');
+  out.push('jitter it is measured against, so the honest statement is "indistinguishable from');
+  out.push('the cheapest thing we can measure" rather than a number.');
+  out.push('');
+  out.push('**Chaining is not the same as a compound selector.** `chained.locator` and');
+  out.push('`css.chain.full` reach the same element by the same three steps, and one is');
+  out.push('thousands of times slower: each chained `.locator()` re-resolves against every');
+  out.push('match of the step before it, so the work is a product of the counts rather than a');
+  out.push('single pass. This is the largest avoidable difference in the whole matrix.');
+  out.push('');
+  out.push('**The `filter` family multiplies.** `filter({ has })` and `:has()` run a subquery');
+  out.push('per candidate container, and `:visible` forces a layout read per candidate.');
+  out.push('Cheap on a small list, pathological on a large one.');
+  out.push('');
+  out.push('**The role family has no native floor** because no DOM API computes accessible');
+  out.push('names, so there is nothing to compare Playwright against. The traced profile');
+  out.push('confirms it forces no layout, so whatever it spends goes on script — but the');
+  out.push('trace does not say what, and the GC figures do not separate it from a bare id');
+  out.push('lookup. That role queries compute a name per candidate is the documented');
+  out.push('behaviour of the API and fits the timings; it is **not** something this');
+  out.push('benchmark has measured directly.');
+  out.push('');
+  out.push('**Speed is the least important column here.** A locator that is unique and');
+  out.push('survives refactoring, but takes a few milliseconds, costs nothing anyone will');
+  out.push('notice. A locator that silently matches the wrong element costs an afternoon. The');
+  out.push('ranking in the dashboard weights it accordingly.');
+  out.push('');
+
+  mkdirSync(dirname(OUT), { recursive: true });
+  writeFileSync(OUT, out.join('\n'));
+  console.log(`Wrote ${OUT} (${STRATEGIES.length} strategies${summary ? ', with measurements' : ', calls only'})`);
+}
+
+main();

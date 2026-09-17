@@ -1,0 +1,24 @@
+<section class="bm-virtual-page">
+  <h1>Virtual scroll {{ virtual() ? 'ON' : 'OFF' }} — {{ items().length }} rows</h1>
+  <p class="bm-status">
+    last: <span data-testid="status.last-clicked.value">{{ log.last() }}</span>
+  </p>
+
+  @if (virtual()) {
+    <cdk-virtual-scroll-viewport [itemSize]="itemSize" class="bm-viewport" data-testid="virtual.viewport">
+      <div class="bm-vrow" *cdkVirtualFor="let i of items(); templateCacheSize: 0" [attr.data-row]="i">
+        <button type="button" class="bm-vrow__btn" [bmTarget]="spec(i)"
+                (click)="onClick(i)">Row {{ i }}</button>
+      </div>
+    </cdk-virtual-scroll-viewport>
+  } @else {
+    <div class="bm-viewport bm-viewport--plain" data-testid="virtual.viewport">
+      @for (i of items(); track i) {
+        <div class="bm-vrow" [attr.data-row]="i">
+          <button type="button" class="bm-vrow__btn" [bmTarget]="spec(i)"
+                  (click)="onClick(i)">Row {{ i }}</button>
+        </div>
+      }
+    </div>
+  }
+</section>

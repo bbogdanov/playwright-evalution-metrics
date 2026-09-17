@@ -1,0 +1,27 @@
+<section class="bm-amb-page">
+  <h1>Ambiguity: {{ cards().length }} identical cards, canonical target in #{{ targetCard() }}</h1>
+  <p class="bm-status">
+    last: <span data-testid="status.last-clicked.value">{{ log.last() }}</span>
+  </p>
+
+  <div class="bm-amb__list" data-testid="amb.list">
+    @for (i of cards(); track i) {
+      <!-- The card wrapper is uniquely addressable; everything inside it is not. -->
+      <article class="bm-card" [attr.data-testid]="'card.' + i" [attr.data-card]="i">
+        <h2 class="bm-card__title">{{ copy.t('segment') }}</h2>
+        <p class="bm-card__body">{{ copy.t('status') }}: {{ copy.t('active') }}</p>
+
+        @if (i === targetCard()) {
+          <!-- Canonical: identical to every decoy except for its identity attributes. -->
+          <button type="button" class="bm-card__action" [bmTarget]="spec(i)"
+                  (click)="onClick(i)">{{ copy.t('open') }}</button>
+        } @else {
+          <!-- Decoy: same class, same text, same accessible name, no identity. -->
+          <button type="button" class="bm-card__action bm-action bm-action--v0"
+                  [attr.aria-label]="copy.t('open')"
+                  (click)="onClick(i)">{{ copy.t('open') }}</button>
+        }
+      </article>
+    }
+  </div>
+</section>

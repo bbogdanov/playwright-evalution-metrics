@@ -1,0 +1,26 @@
+{
+  "name": "playwright-locator-metrics",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Benchmark harness measuring Playwright locator strategies against a large Angular application",
+  "type": "module",
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
+  },
+  "scripts": {
+    "app:build": "npm --prefix app run build -- --configuration production",
+    "app:serve": "node tools/static-server.mjs",
+    "bench": "playwright test",
+    "bench:micro": "playwright test --project=micro",
+    "bench:macro": "playwright test --project=macro",
+    "analyze": "node analysis/aggregate.mjs",
+    "dashboard": "node analysis/build-dashboard.mjs",
+    "report": "npm run analyze && npm run dashboard && npm run reference",
+    "reference": "node analysis/strategy-reference.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.10.0",
+    "typescript": "~5.9.0"
+  }
+}

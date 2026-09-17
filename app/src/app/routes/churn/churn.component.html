@@ -1,0 +1,26 @@
+<section class="bm-churn-page">
+  <h1>Churn @ {{ params.hz() }}Hz — track {{ trackBy() ? 'stable' : 'unstable' }}</h1>
+  <p class="bm-status">
+    tick: <span data-testid="status.tick">{{ tick() }}</span>
+    / last: <span data-testid="status.last-clicked.value">{{ log.last() }}</span>
+    / clicks: <span data-testid="status.click-count">{{ log.count() }}</span>
+  </p>
+
+  <div class="bm-churn__list" data-testid="churn.list">
+    @if (trackBy()) {
+      @for (item of items(); track item.id) {
+        <div class="bm-churn__row" [attr.data-row]="item.id">
+          <button type="button" class="bm-churn__cell" [bmTarget]="spec(item.id)"
+                  (click)="onClick(item.id)">{{ item.value }}</button>
+        </div>
+      }
+    } @else {
+      @for (item of items(); track item.token) {
+        <div class="bm-churn__row" [attr.data-row]="item.id">
+          <button type="button" class="bm-churn__cell" [bmTarget]="spec(item.id)"
+                  (click)="onClick(item.id)">{{ item.value }}</button>
+        </div>
+      }
+    }
+  </div>
+</section>

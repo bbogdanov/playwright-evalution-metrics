@@ -1,0 +1,7 @@
+.bm-forms-page { padding: 12px; font: 13px system-ui, sans-serif; }
+.bm-status { font: 12px monospace; }
+.bm-form { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.bm-field { display: flex; flex-direction: column; min-width: 190px; }
+.bm-field__label { font-size: 11px; color: #444; }
+.bm-field__input { font: 12px system-ui, sans-serif; padding: 2px 4px; border: 1px solid #ccc; }
+.bm-form__submit { margin-top: 10px; }

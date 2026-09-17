@@ -1,0 +1,5 @@
+/* Minimal, deterministic base styles. Anything that animates or reflows
+   unpredictably would add variance to timing measurements, so there is none. */
+html, body { margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+* { box-sizing: border-box; }
