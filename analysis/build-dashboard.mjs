@@ -10,7 +10,7 @@
  * 45-minute benchmark.
  */
 import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { renderHtml } from './dashboard-template.mjs';
 import { describeStrategies } from './strategy-calls.mjs';
@@ -52,9 +52,16 @@ try {
 summary.strategies = describeStrategies();
 summary.referenceUrl = referenceUrl();
 
+// Playwright's own run report, when the suite has produced one. Relative, so the
+// link works both from disk and from the published site.
+summary.playwrightReport = existsSync(resolve(dirname(OUT), 'playwright-report/index.html'))
+  ? 'playwright-report/index.html'
+  : null;
+
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, renderHtml(summary));
 console.log(
   `Wrote ${OUT} (${(readFileSync(OUT).length / 1024).toFixed(0)} kB, ` +
-  `${summary.strategies.length} strategy definitions, reference ${summary.referenceUrl ? 'linked' : 'not linked'})`,
+  `${summary.strategies.length} strategy definitions, reference ${summary.referenceUrl ? 'linked' : 'not linked'}, ` +
+  `run report ${summary.playwrightReport ? 'linked' : 'absent'})`,
 );

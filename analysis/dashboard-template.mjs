@@ -490,6 +490,10 @@ document.addEventListener('click', (e) => {
     parts.push('<a class="ref-link" href="' + esc(S.referenceUrl) + '" target="_blank" rel="noopener">' +
                'Locator reference — what every strategy actually executes →</a>');
   }
+  if (S.playwrightReport) {
+    parts.push('<a class="ref-link" href="' + esc(S.playwrightReport) + '">' +
+               'Playwright run report — every test, timing and failure →</a>');
+  }
   parts.push('<a class="ref-link" href="#glossary-section">Glossary ↓</a>');
   document.getElementById('headerLinks').innerHTML = parts.join(' &nbsp;·&nbsp; ');
 })();
