@@ -19,11 +19,11 @@ renders it:
 
 ## Measurement context
 
-- **Machine**: Intel(R) Xeon(R) Processor @ 2.80GHz ×4, load 0.39
+- **Machine**: Intel(R) Xeon(R) Processor @ 2.80GHz ×4, load 0.89
 - **Toolchain**: Playwright 1.63.0, Chromium 141.0.7390.37, Node v22.23.2
 - **Page**: largest tier measured (`l`), ~120,000 DOM elements, target at depth 9
-- **Noise floor**: 0.049 ms — differences smaller than this are not differences
-- **For scale**: a click on a quiet page costs 49.94 ms
+- **Noise floor**: 0.044 ms — differences smaller than this are not differences
+- **For scale**: a click on a quiet page costs 49.76 ms
 - **Caveat**: Chromium build 1194 in use; this Playwright ships 1243. Results are valid for the pair exercised, not for the default pairing.
 
 Costs are medians, net of a paired baseline. They are valid for this machine
@@ -36,12 +36,12 @@ A single attribute lookup. Nothing in this family depends on page size, copy, st
 
 | Strategy | Call | Cost | Survives change | Stays unique |
 |---|---|---|---|---|
-| `id.engine` | `page.locator("id=cell-r750-c2")` | 0.538 ms *(at floor)* | 100% | 100% |
-| `id.css` | `page.locator("#cell-r750-c2")` | 0.538 ms *(at floor)* | 100% | 100% |
-| `testid.engine` | `page.locator("data-testid=cell.750.2")` | 0.679 ms | 86% | 100% |
-| `testid.css` | `page.locator("[data-testid=\"cell.750.2\"]")` | 1.97 ms | 86% | 100% |
-| `qa.attr` | `page.locator("[data-qa=\"ebc69256\"]")` | 2.55 ms | 100% | 100% |
-| `testid.api` | `page.getByTestId("cell.750.2")` | 51.02 ms | 86% | 100% |
+| `testid.engine` | `page.locator("data-testid=cell.750.2")` | 0.421 ms *(at floor)* | 86% | 100% |
+| `id.engine` | `page.locator("id=cell-r750-c2")` | 0.421 ms *(at floor)* | 100% | 100% |
+| `id.css` | `page.locator("#cell-r750-c2")` | 0.421 ms *(at floor)* | 100% | 100% |
+| `qa.attr` | `page.locator("[data-qa=\"ebc69256\"]")` | 1.20 ms | 100% | 100% |
+| `testid.css` | `page.locator("[data-testid=\"cell.750.2\"]")` | 2.64 ms | 86% | 100% |
+| `testid.api` | `page.getByTestId("cell.750.2")` | 41.44 ms | 86% | 100% |
 
 ## Attribute — other attribute-based addressing
 
@@ -49,8 +49,8 @@ Also a single lookup, but uniqueness depends on the data rather than on a delibe
 
 | Strategy | Call | Cost | Survives change | Stays unique |
 |---|---|---|---|---|
-| `attr.compound` | `page.locator("[data-kind=\"cell\"][data-row=\"750\"][data-col=\"2\"]")` | 11.81 ms | 100% | 100% |
-| `title.api` | `page.getByTitle("Status for row 750", { exact: true })` | 39.85 ms | 71% | 100% |
+| `attr.compound` | `page.locator("[data-kind=\"cell\"][data-row=\"750\"][data-col=\"2\"]")` | 9.24 ms | 100% | 100% |
+| `title.api` | `page.getByTitle("Status for row 750", { exact: true })` | 40.42 ms | 71% | 100% |
 
 ## Class — semantic or build-hashed
 
@@ -58,10 +58,10 @@ A class scan. Unique only for as long as exactly one element carries the class, 
 
 | Strategy | Call | Cost | Survives change | Stays unique |
 |---|---|---|---|---|
-| `class.compound` | `page.locator(".bm-cell.bm-cell--v2")` | 6.30 ms | n/a | 20% |
-| `class.hashed` | `page.locator("._a854d9")` | 12.68 ms | n/a | 100% |
-| `class.semantic.nth` | `page.locator(".bm-cell").nth(4502)` | 12.82 ms | 86% | 100% |
-| `class.semantic` | `page.locator(".bm-cell")` | 15.57 ms | n/a | 20% |
+| `class.compound` | `page.locator(".bm-cell.bm-cell--v2")` | 6.49 ms | n/a | 20% |
+| `class.semantic` | `page.locator(".bm-cell")` | 13.95 ms | n/a | 20% |
+| `class.hashed` | `page.locator("._a854d9")` | 14.49 ms | n/a | 100% |
+| `class.semantic.nth` | `page.locator(".bm-cell").nth(4502)` | 15.01 ms | 86% | 100% |
 
 ## Structural — ancestry and position
 
@@ -69,10 +69,10 @@ Depends on where the element sits. Survives copy changes; does not survive someo
 
 | Strategy | Call | Cost | Survives change | Stays unique |
 |---|---|---|---|---|
-| `xpath.absolute` | `page.locator("xpath=/html/body/app-root/bm-grid/section/table/tbody/tr[751]/td[3]/button")` | 0.538 ms *(at floor)* | 71% | 100% |
-| `xpath.relative` | `page.locator("xpath=//button[@aria-label=\"Status for row 750\"]")` | 0.538 ms *(at floor)* | 71% | 100% |
-| `nth.engine` | `page.locator("css=.bm-cell >> nth=4502")` | 21.95 ms | 86% | 100% |
-| `css.chain.full` | `page.locator("tr.bm-grid__row > td.bm-grid__cellwrap > button.bm-grid__cell.bm-cell.bm-cell--v2._a854d9")` | 53.82 ms | n/a | 100% |
+| `xpath.absolute` | `page.locator("xpath=/html/body/app-root/bm-grid/section/table/tbody/tr[751]/td[3]/button")` | 0.421 ms *(at floor)* | 71% | 100% |
+| `xpath.relative` | `page.locator("xpath=//button[@aria-label=\"Status for row 750\"]")` | 0.421 ms *(at floor)* | 71% | 100% |
+| `nth.engine` | `page.locator("css=.bm-cell >> nth=4502")` | 21.89 ms | 86% | 100% |
+| `css.chain.full` | `page.locator("tr.bm-grid__row > td.bm-grid__cellwrap > button.bm-grid__cell.bm-cell.bm-cell--v2._a854d9")` | 50.48 ms | n/a | 100% |
 
 ## Role — the accessibility tree
 
@@ -80,9 +80,9 @@ Computes an accessible name for every element of that role, matched or not. No D
 
 | Strategy | Call | Cost | Survives change | Stays unique |
 |---|---|---|---|---|
-| `role.bare.nth` | `page.getByRole("button").nth(4502)` | 463.12 ms | 86% | 100% |
-| `role.locator` | `page.locator("role=button[name=\"Status for row 750\"s]")` | 567.82 ms | 71% | 100% |
-| `role.name` | `page.getByRole("button", { name: "Status for row 750", exact: true })` | 580.61 ms | 71% | 100% |
+| `role.bare.nth` | `page.getByRole("button").nth(4502)` | 431.78 ms | 86% | 100% |
+| `role.name` | `page.getByRole("button", { name: "Status for row 750", exact: true })` | 587.71 ms | 71% | 100% |
+| `role.locator` | `page.locator("role=button[name=\"Status for row 750\"s]")` | 598.50 ms | 71% | 100% |
 
 ## Text — visible copy
 
@@ -90,9 +90,9 @@ Walks text nodes and normalises whitespace. Cost scales with the amount of text 
 
 | Strategy | Call | Cost | Survives change | Stays unique |
 |---|---|---|---|---|
-| `text.substring` | `page.getByText("status-750-2-ft")` | 281.23 ms | 100% | 20% |
-| `text.locator` | `page.locator("text=\"status-750-2-ft8o\"")` | 323.53 ms | 100% | 20% |
-| `text.exact` | `page.getByText("status-750-2-ft8o", { exact: true })` | 329.57 ms | 100% | 20% |
+| `text.substring` | `page.getByText("status-750-2-ft")` | 310.42 ms | 100% | 20% |
+| `text.exact` | `page.getByText("status-750-2-ft8o", { exact: true })` | 346.46 ms | 100% | 20% |
+| `text.locator` | `page.locator("text=\"status-750-2-ft8o\"")` | 347.01 ms | 100% | 20% |
 
 ## Filter — relational, a subquery or a layout read per candidate
 
@@ -100,11 +100,11 @@ Runs a subquery, a text scan or a layout read per candidate. Cost is the product
 
 | Strategy | Call | Cost | Survives change | Stays unique |
 |---|---|---|---|---|
-| `filter.hasText` | `page.locator(".bm-cell").filter({ hasText: "status-750-2-ft8o" })` | 114.58 ms | 100% | 20% |
-| `css.hasText` | `page.locator(".bm-cell:has-text(\"status-750-2-ft8o\")")` | 123.47 ms | 100% | 20% |
-| `css.visible` | `page.locator(".bm-cell:visible")` | 206.61 ms | n/a | 20% |
-| `css.has` | `page.locator("tr.bm-grid__row > td.bm-grid__cellwrap:has([data-testid=\"cell.750.2\"]) > button.bm-grid__cell.bm-cell.bm-cell--v2._a854d9")` | 4.54 s | 43% | 100% |
-| `filter.has` | `page.locator("tr.bm-grid__row > td.bm-grid__cellwrap").filter({ has: page.locator("[data-testid=\"cell.750.2\"]") }).locator("button.bm-grid__cell.bm-cell.bm-cell--v2._a854d9")` | 31.68 s | 57% | 100% |
+| `filter.hasText` | `page.locator(".bm-cell").filter({ hasText: "status-750-2-ft8o" })` | 109.76 ms | 100% | 20% |
+| `css.hasText` | `page.locator(".bm-cell:has-text(\"status-750-2-ft8o\")")` | 139.60 ms | 100% | 20% |
+| `css.visible` | `page.locator(".bm-cell:visible")` | 189.45 ms | n/a | 20% |
+| `css.has` | `page.locator("tr.bm-grid__row > td.bm-grid__cellwrap:has([data-testid=\"cell.750.2\"]) > button.bm-grid__cell.bm-cell.bm-cell--v2._a854d9")` | 3.55 s | 43% | 100% |
+| `filter.has` | `page.locator("tr.bm-grid__row > td.bm-grid__cellwrap").filter({ has: page.locator("[data-testid=\"cell.750.2\"]") }).locator("button.bm-grid__cell.bm-cell.bm-cell--v2._a854d9")` | 36.61 s | 57% | 100% |
 
 ## Composite — scoping, chaining, mixed engines
 
@@ -112,10 +112,10 @@ Combines the above. Scoping narrows the candidate set before the expensive part;
 
 | Strategy | Call | Cost | Survives change | Stays unique |
 |---|---|---|---|---|
-| `scoped.class` | `page.getByTestId("row.750").locator(".bm-cell")` | 41.48 ms | n/a | 100% |
-| `scoped.role` | `page.getByTestId("row.750").getByRole("button", { name: "Status for row 750", exact: true })` | 42.49 ms | 71% | 100% |
-| `mixed.engine` | `page.locator("css=.bm-cell >> text=\"status-750-2-ft8o\"")` | 5.65 s | 100% | 20% |
-| `chained.locator` | `page.locator("tr.bm-grid__row").locator("td.bm-grid__cellwrap").locator("button.bm-grid__cell.bm-cell.bm-cell--v2._a854d9")` | 100.84 s | n/a | 100% |
+| `scoped.role` | `page.getByTestId("row.750").getByRole("button", { name: "Status for row 750", exact: true })` | 43.86 ms | 71% | 100% |
+| `scoped.class` | `page.getByTestId("row.750").locator(".bm-cell")` | 50.41 ms | n/a | 100% |
+| `mixed.engine` | `page.locator("css=.bm-cell >> text=\"status-750-2-ft8o\"")` | 5.51 s | 100% | 20% |
+| `chained.locator` | `page.locator("tr.bm-grid__row").locator("td.bm-grid__cellwrap").locator("button.bm-grid__cell.bm-cell.bm-cell--v2._a854d9")` | 98.39 s | n/a | 100% |
 
 ## What each one is for
 
@@ -171,8 +171,8 @@ is counted here, not inferred from the shape of a timing curve.
 
 Garbage-collection time was also recorded, to test whether the role and text
 engines show allocation pressure from building strings per candidate. **It does
-not separate them.** The heaviest reading is `chained.locator` at
-2.57 ms/query, but `id.engine` — an id lookup that
+not separate them.** The heaviest reading is `mixed.engine` at
+2.69 ms/query, but `id.engine` — an id lookup that
 touches one element — reads 0.00 ms/query, which is the same
 band. GC is not attributed to whatever caused the allocation, so these numbers
 carry no signal about which locator did the work. Recorded and reported as a
