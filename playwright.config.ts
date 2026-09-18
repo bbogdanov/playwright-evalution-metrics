@@ -20,7 +20,11 @@ import { BASE_URL } from './e2e/harness/paths';
 export default defineConfig({
   testDir: './e2e',
   globalSetup: './e2e/harness/global-setup.ts',
-  timeout: 25 * 60 * 1000,
+  // Generous on purpose. The largest DOM tier measures 31 strategies twice, and
+  // the pathological ones cost minutes per single probe - chained.locator alone
+  // has been observed at 158s for one query at 120k elements. A timeout tuned to
+  // one machine turns a slower runner into a failed run rather than a slow one.
+  timeout: 45 * 60 * 1000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
