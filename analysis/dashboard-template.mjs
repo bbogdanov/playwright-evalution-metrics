@@ -1,5 +1,136 @@
 import { PALETTE, STATUS, OUTCOME_STATUS } from './palette.mjs';
 
+/**
+ * Plain-language definitions for the terms this dashboard uses.
+ *
+ * Every entry says what the term means AND why this study uses it, because the
+ * second half is what a reader actually needs: "p95" is easy to look up, "why p95
+ * rather than the mean here" is the part that makes the numbers legible.
+ */
+export const GLOSSARY = {
+  median: {
+    term: 'median',
+    short: 'The middle value: half the samples are faster, half slower.',
+    detail: 'Reported instead of the mean throughout. Browser timings are right-skewed \u2014 a GC pause or a scheduler hiccup adds a long tail but nothing pulls the other way \u2014 so a mean mostly reports the outliers. The median ignores them.',
+  },
+  p95: {
+    term: 'p95',
+    short: '95th percentile: only 1 sample in 20 is slower than this.',
+    detail: 'The tail, not the typical case. A locator with a good median and a bad p95 is one that usually behaves and occasionally stalls, which is exactly the profile that produces flaky tests.',
+  },
+  mad: {
+    term: 'MAD',
+    short: 'Median absolute deviation: the median distance of samples from the median.',
+    detail: 'A spread measure that outliers cannot inflate, used here in place of standard deviation. One 400ms GC pause moves a standard deviation a long way and barely moves a MAD, so MAD describes what the measurement usually does.',
+  },
+  stdev: {
+    term: 'standard deviation',
+    short: 'The usual spread measure \u2014 reported here only for comparison.',
+    detail: 'It assumes a roughly symmetric distribution, which timing data is not. It is shown next to the median so you can see how far the two disagree; where they disagree a lot, the mean is not describing the data.',
+  },
+  'noise-floor': {
+    term: 'noise floor',
+    short: 'The smallest median difference this setup can actually resolve.',
+    detail: 'Measured by timing the baseline locator against itself and taking the bootstrap confidence interval of the median paired difference. Any gap between two strategies smaller than this is reported as indistinguishable no matter how good its p-value looks.',
+  },
+  'sample-floor': {
+    term: 'single-sample floor',
+    short: 'How far one individual measurement can be off.',
+    detail: 'The p95 of a single baseline-versus-baseline difference, about 20x larger than the median floor. It is the right yardstick for one sample and the wrong one for comparing medians \u2014 conflating the two made an early version of this analysis throw away every real result in the identity family.',
+  },
+  'bootstrap-ci': {
+    term: 'bootstrap confidence interval',
+    short: 'A range for the true median, obtained by resampling the data itself.',
+    detail: 'The samples are drawn from with replacement a few thousand times, a median is taken each time, and the middle 95% of those medians is the interval. Used because the sampling distribution of a median on skewed timing data has no useful closed form.',
+  },
+  'mann-whitney': {
+    term: 'Mann-Whitney U',
+    short: 'A test of whether one set of samples tends to be larger than another.',
+    detail: 'Non-parametric: it ranks the pooled samples rather than assuming a shape, so it is valid on skewed timing data where a t-test is not. Tie-corrected here, because clamped timer resolution produces a lot of exactly-equal values.',
+  },
+  'p-value': {
+    term: 'p-value',
+    short: 'The chance of seeing a difference this large if there were really no difference.',
+    detail: 'Below 0.05 is treated as significant here. On its own it is not enough: with enough samples a difference of 0.001ms becomes "significant" while remaining meaningless, which is why every verdict also has to clear the noise floor.',
+  },
+  'effect-size': {
+    term: 'effect size',
+    short: 'How big the difference is, on a scale from -1 to 1.',
+    detail: 'Rank-biserial correlation: the degree to which samples from one group outrank the other. 0 means the two are interleaved; 1 means every sample in one group beats every sample in the other. The p-value says whether a difference exists, this says whether it matters.',
+  },
+  paired: {
+    term: 'paired measurement',
+    short: 'Each sample is timed against a trivial locator run immediately before it.',
+    detail: 'A round trip to the browser costs far more than a simple query, so timing a locator naively measures the transport. Running a trivial locator first and subtracting removes that, and interleaving the two cancels drift from CPU frequency scaling and background load.',
+  },
+  'round-trip': {
+    term: 'round trip',
+    short: 'One request from the test process to the browser and back.',
+    detail: 'Every locator call pays one. On this machine it costs more than most queries do, which is why the paired design exists and why the cheapest strategies all measure at the floor rather than at their true cost.',
+  },
+  'at-floor': {
+    term: 'at floor',
+    short: 'Too fast to separate from the cheapest thing measurable.',
+    detail: 'Not the same as "free". It means the query costs less than the jitter it is measured against, so the honest statement is that the instrument cannot tell it apart from a no-op, not that it takes zero time.',
+  },
+  'probe-only': {
+    term: 'probe only',
+    short: 'A single sample, because repeating it was too expensive.',
+    detail: 'Some strategies take over a minute per query at the largest DOM size. Sampling those properly would cost more wall clock than the rest of the study, so one probe is recorded and flagged \u2014 n=1 is never presented as though it were n=30.',
+  },
+  'budget-limited': {
+    term: 'budget limited',
+    short: 'The repetition count was set by a time budget, not by the requested number.',
+    detail: 'Costs here span seven orders of magnitude. A fixed repetition count would either starve the cheap cells of samples or spend twenty minutes on one expensive cell, so a probe sets the count to fit the budget.',
+  },
+  'strict-mode': {
+    term: 'strict mode',
+    short: 'Playwright refuses to act when a locator matches more than one element.',
+    detail: 'It will not guess which one you meant. This turns an ambiguous locator into a hard failure rather than a silent wrong click \u2014 which is why ambiguity is measured here as a correctness property, not a style preference.',
+  },
+  strictness: {
+    term: 'strictness',
+    short: 'How often the locator still matched exactly one element as the list grew.',
+    detail: 'Measured by repeating identical markup and counting matches. A locator written against a five-row fixture that matches 600 elements in production data scores badly here, and would fail strict mode the first time it met real data.',
+  },
+  robustness: {
+    term: 'robustness',
+    short: 'How many ordinary code changes the locator survived.',
+    detail: 'Seven mutations are applied \u2014 translation, reworded copy, re-hashed class names, a renamed class, an added wrapper element, reordered siblings, a renamed test-id attribute \u2014 and the locator must still reach the same physical element, verified through an attribute no mutation touches.',
+  },
+  composite: {
+    term: 'composite score',
+    short: 'A weighted combination of robustness, strictness, failure cost and speed.',
+    detail: 'Robustness and strictness dominate deliberately: both are correctness properties that cost a developer an afternoon, while speed differences usually cost milliseconds. Speed still bites for the pathological strategies because it is scored on a log scale across the range actually observed.',
+  },
+  'forced-layout': {
+    term: 'forced layout',
+    short: 'The browser recomputing geometry on demand, mid-query.',
+    detail: 'Counted from a Chrome trace rather than inferred. The :visible pseudo-class forces exactly one style-and-layout pass per candidate element; every other strategy in the matrix forces zero. That is a property of the engine, so it holds on any machine.',
+  },
+  'native-floor': {
+    term: 'native floor',
+    short: 'What the same lookup costs using a plain DOM API, with no Playwright involved.',
+    detail: 'Separates the cost of the query from the cost of the tooling around it. For the role and text families there is no native equivalent \u2014 no DOM API computes accessible names \u2014 and that absence is the explanation for their numbers.',
+  },
+  'dom-tier': {
+    term: 'DOM tier',
+    short: 'A page-size bracket, from a few hundred elements to 120,000.',
+    detail: 'The same markup rendered at four scales, so cost can be plotted against size rather than measured at one arbitrary point. Strategies that look identical on a small page separate by orders of magnitude on a large one.',
+  },
+  depth: {
+    term: 'depth',
+    short: 'How many element levels below <body> the target sits.',
+    detail: 'Recorded on every measurement and counted through shadow boundaries. Depth and page size are normally confounded \u2014 deeper pages are usually bigger pages \u2014 so a separate scenario holds the element count fixed and varies only depth.',
+  },
+  'log-scale': {
+    term: 'log scale',
+    short: 'Each step on the axis is a multiplication, not an addition.',
+    detail: 'Used because the measured range spans seven orders of magnitude. On a linear axis every strategy except the slowest would collapse into a single line at the bottom of the chart.',
+  },
+};
+
+
 /** CSS custom properties per mode, emitted for both the OS setting and the theme toggle. */
 function tokenBlock(mode) {
   const p = PALETTE[mode];
@@ -19,6 +150,7 @@ ${p.seq.map((c, i) => `    --seq-${i}: ${c};`).join('\n')}`;
 
 export function renderHtml(summary) {
   const data = JSON.stringify(summary).replace(/</g, '\\u003c');
+  const glossary = JSON.stringify(GLOSSARY).replace(/</g, '\\u003c');
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -88,6 +220,75 @@ summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
 .chip.ok { color: var(--status-good); border-color: var(--status-good); }
 .chip.no { color: var(--status-critical); border-color: var(--status-critical); }
 .chip.meh { color: var(--text-muted); }
+/* A defined term. Dotted underline rather than a link colour, so it reads as
+   "there is an explanation here" and not as navigation away from the page. */
+.term {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0 1px;
+  border-bottom: 1px dotted var(--text-muted);
+  cursor: help;
+}
+.term:hover, .term:focus-visible { border-bottom-style: solid; color: var(--series-1); outline: none; }
+.term[aria-expanded="true"] { border-bottom-style: solid; color: var(--series-1); }
+.term-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95em;
+  border-bottom: 1px dotted var(--text-muted);
+  cursor: help;
+  background: none; border-top: 0; border-left: 0; border-right: 0;
+  color: inherit; padding: 0;
+}
+.term-code:hover, .term-code:focus-visible { color: var(--series-1); border-bottom-style: solid; outline: none; }
+
+/* Pinned, clickable popover. Distinct from #tip, which is a hover-only chart
+   tooltip with pointer-events disabled and therefore cannot hold a link. */
+#pop {
+  position: fixed;
+  z-index: 60;
+  max-width: 380px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.20);
+  font: 13px/1.55 system-ui, sans-serif;
+  display: none;
+}
+#pop[data-open="true"] { display: block; }
+#pop .pop-term { font-weight: 600; font-size: 13.5px; margin-bottom: 4px; }
+#pop .pop-short { color: var(--text-primary); margin-bottom: 8px; }
+#pop .pop-detail { color: var(--text-secondary); font-size: 12.5px; }
+#pop .pop-call {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  background: var(--plane);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 6px 8px;
+  margin: 6px 0 8px;
+  overflow-wrap: anywhere;
+}
+#pop .pop-close {
+  position: absolute; top: 6px; right: 8px;
+  background: none; border: 0; color: var(--text-muted);
+  font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 4px;
+}
+#pop .pop-close:hover { color: var(--text-primary); }
+.ref-link {
+  font-size: 12.5px;
+  color: var(--series-1);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.ref-link:hover { border-bottom-color: currentColor; }
+.glossary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 18px; }
+.glossary-grid .g-item { border-left: 2px solid var(--grid); padding-left: 10px; }
+.glossary-grid .g-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+.glossary-grid .g-short { color: var(--text-secondary); font-size: 12.5px; }
 #tip {
   position: fixed; pointer-events: none; opacity: 0; transition: opacity .09s;
   background: var(--surface-1); color: var(--text-primary);
@@ -106,7 +307,10 @@ summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
   <button class="toggle" id="themeToggle" type="button">Theme</button>
   <header>
     <h1>Playwright locator strategies</h1>
-    <p class="sub">Measured against a controlled Angular application. Every strategy resolves the same physical element.</p>
+    <p class="sub">
+      Measured against a controlled Angular application. Every strategy resolves the same physical element.
+    </p>
+    <p class="sub" id="headerLinks"></p>
   </header>
   <div id="fingerprint" class="fingerprint"></div>
   <div id="caveats"></div>
@@ -114,7 +318,9 @@ summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
   <div id="sections"></div>
 </div>
 <div id="tip" role="status" aria-live="polite"></div>
+<div id="pop" role="dialog" aria-modal="false" aria-label="Definition"></div>
 <script id="data" type="application/json">${data}</script>
+<script id="glossary" type="application/json">${glossary}</script>
 <script>
 ${CLIENT_JS}
 </script>
@@ -167,9 +373,125 @@ const svgEl = (name, attrs = {}) => {
   return e;
 };
 
+
+// --- glossary and reference popover ----------------------------------------
+const G = JSON.parse(document.getElementById('glossary').textContent);
+const STRAT = new Map((S.strategies || []).map((x) => [x.id, x]));
+const pop = document.getElementById('pop');
+let popTrigger = null;
+
+/**
+ * Opens the pinned popover anchored to an element.
+ *
+ * Pinned rather than hover-only because the content is long enough to want to
+ * read at your own pace, and because it can contain a link. Placed below the
+ * trigger, flipped above when there is not enough room, and clamped to the
+ * viewport so it never renders off-screen on a phone.
+ */
+function openPop(trigger, html) {
+  if (popTrigger === trigger && pop.dataset.open === 'true') { closePop(); return; }
+  closePop();
+  popTrigger = trigger;
+  pop.innerHTML = '<button class="pop-close" type="button" aria-label="Close">×</button>' + html;
+  pop.dataset.open = 'true';
+  trigger.setAttribute('aria-expanded', 'true');
+
+  const t = trigger.getBoundingClientRect();
+  const r = pop.getBoundingClientRect();
+  const margin = 8;
+  let top = t.bottom + 6;
+  if (top + r.height > innerHeight - margin) {
+    const above = t.top - r.height - 6;
+    top = above >= margin ? above : Math.max(margin, innerHeight - r.height - margin);
+  }
+  let left = t.left;
+  if (left + r.width > innerWidth - margin) left = innerWidth - r.width - margin;
+  pop.style.left = Math.max(margin, left) + 'px';
+  pop.style.top = top + 'px';
+
+  pop.querySelector('.pop-close').addEventListener('click', closePop);
+}
+
+function closePop() {
+  pop.dataset.open = 'false';
+  if (popTrigger) popTrigger.setAttribute('aria-expanded', 'false');
+  popTrigger = null;
+}
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePop(); });
+document.addEventListener('click', (e) => {
+  if (pop.dataset.open !== 'true') return;
+  if (pop.contains(e.target) || (popTrigger && popTrigger.contains(e.target))) return;
+  closePop();
+});
+addEventListener('scroll', () => { if (pop.dataset.open === 'true') closePop(); }, { passive: true });
+addEventListener('resize', closePop);
+
+function termHtml(key) {
+  const g = G[key];
+  if (!g) return '';
+  return '<div class="pop-term">' + esc(g.term) + '</div>' +
+         '<div class="pop-short">' + esc(g.short) + '</div>' +
+         '<div class="pop-detail">' + esc(g.detail) + '</div>';
+}
+
+function strategyHtml(id) {
+  const st = STRAT.get(id);
+  if (!st) return '<div class="pop-term">' + esc(id) + '</div>';
+  const link = S.referenceUrl
+    ? '<div class="pop-detail" style="margin-top:8px"><a class="ref-link" href="' + esc(S.referenceUrl) +
+      '" target="_blank" rel="noopener">Full locator reference →</a></div>'
+    : '';
+  return '<div class="pop-term">' + esc(st.id) + ' <span style="color:var(--text-muted);font-weight:400">· ' + esc(st.family) + '</span></div>' +
+         '<div class="pop-call">' + esc(st.call) + '</div>' +
+         '<div class="pop-detail">' + esc(st.note) + '</div>' + link;
+}
+
+/**
+ * Turns [[term]] and [[term|label]] markers in prose into clickable terms.
+ *
+ * Markers rather than scanning the text for known words: scanning would need to
+ * avoid matching inside HTML tags and would gloss the same word a dozen times in
+ * one paragraph. Explicit markers keep the authoring honest about where an
+ * explanation actually helps.
+ */
+function gloss(text) {
+  return String(text).replace(/\[\[([a-z-]+)(?:\|([^\]]+))?\]\]/g, (whole, key, label) => {
+    const g = G[key];
+    if (!g) return label || key;
+    return '<button class="term" type="button" data-term="' + key + '" aria-expanded="false">' +
+           esc(label || g.term) + '</button>';
+  });
+}
+
+/** A strategy id rendered as a clickable chip showing the call it makes. */
+function stratChip(id) {
+  if (!STRAT.has(id)) return esc(id);
+  return '<button class="term-code" type="button" data-strategy="' + esc(id) + '" aria-expanded="false">' +
+         esc(id) + '</button>';
+}
+
+document.addEventListener('click', (e) => {
+  const term = e.target.closest('[data-term]');
+  if (term) { e.stopPropagation(); openPop(term, termHtml(term.dataset.term)); return; }
+  const st = e.target.closest('[data-strategy]');
+  if (st) { e.stopPropagation(); openPop(st, strategyHtml(st.dataset.strategy)); }
+});
+
+// --- header links ------------------------------------------------------------
+(function headerLinks() {
+  const parts = [];
+  if (S.referenceUrl) {
+    parts.push('<a class="ref-link" href="' + esc(S.referenceUrl) + '" target="_blank" rel="noopener">' +
+               'Locator reference — what every strategy actually executes →</a>');
+  }
+  parts.push('<a class="ref-link" href="#glossary-section">Glossary ↓</a>');
+  document.getElementById('headerLinks').innerHTML = parts.join(' &nbsp;·&nbsp; ');
+})();
+
 function section(title, lede) {
   const s = document.createElement('section');
-  s.innerHTML = '<h2>' + esc(title) + '</h2><p class="lede">' + lede + '</p>';
+  s.innerHTML = '<h2>' + esc(title) + '</h2><p class="lede">' + gloss(lede) + '</p>';
   document.getElementById('sections').appendChild(s);
   return s;
 }
@@ -203,11 +525,13 @@ function tableView(sec, headers, rows, caption) {
   const notes = [];
   if (!e.browserRevisionMatched) notes.push(e.notes[0]);
   notes.push(
-    'Timings are comparable only within this fingerprint. Differences smaller than the measurement floor of ' +
-    fmtMs(S.globalNoiseFloorMs) + ' are reported as indistinguishable regardless of p-value.'
+    'Timings are comparable only within this fingerprint. Differences smaller than the [[noise-floor|measurement floor]] of ' +
+    fmtMs(S.globalNoiseFloorMs) + ' are reported as indistinguishable regardless of [[p-value]].'
   );
+  // The second note carries glossary markers; the first is a verbatim environment
+  // warning and must not be glossed.
   document.getElementById('caveats').innerHTML =
-    notes.map((n) => '<div class="caveat">' + esc(n) + '</div>').join('');
+    notes.map((n, i) => '<div class="caveat">' + (i === notes.length - 1 ? gloss(n) : esc(n)) + '</div>').join('');
 })();
 
 // --- stat tiles ------------------------------------------------------------
@@ -226,8 +550,8 @@ function tableView(sec, headers, rows, caption) {
   const atFloor = meds.length ? meds[0] < floor : false;
 
   const tiles = [
-    { k: 'Measurement floor', v: fmtMs(S.globalNoiseFloorMs), n: 'Baseline locator against itself, p95' },
-    { k: 'Largest DOM measured', v: nodes ? nodes.toLocaleString() + ' nodes' : '-', n: 'Tier "' + S.largestTier + '"' },
+    { k: '[[noise-floor|Measurement floor]]', v: fmtMs(S.globalNoiseFloorMs), n: 'Baseline locator against itself' },
+    { k: 'Largest [[dom-tier|DOM tier]] measured', v: nodes ? nodes.toLocaleString() + ' nodes' : '-', n: 'Tier "' + S.largestTier + '"' },
     {
       k: 'Fastest to slowest',
       v: spread === null ? '-'
@@ -238,7 +562,7 @@ function tableView(sec, headers, rows, caption) {
     { k: 'Typical click, quiet page', v: fmtMs(S.typicalActionMs), n: 'What a query cost is competing against' },
   ];
   document.getElementById('tiles').innerHTML = tiles
-    .map((t) => '<div class="tile"><div class="k">' + esc(t.k) + '</div><div class="v">' + esc(t.v) + '</div><div class="n">' + esc(t.n) + '</div></div>')
+    .map((t) => '<div class="tile"><div class="k">' + gloss(t.k) + '</div><div class="v">' + esc(t.v) + '</div><div class="n">' + esc(t.n) + '</div></div>')
     .join('');
 })();
 
@@ -250,8 +574,8 @@ function tableView(sec, headers, rows, caption) {
   const sec = section(
     'Composite ranking',
     'Weighted by ' + Object.entries(S.weights).map(([k, v]) => esc(k) + ' ' + v).join(', ') +
-    '. Robustness and strictness dominate because both are correctness properties: a locator that breaks on a copy change, or that silently matches two elements, costs an afternoon. Speed differences, unless enormous, cost milliseconds. ' +
-    'Scores are renormalised over the components that applied, so strategies measured on fewer than three of the four are listed below the chart rather than ranked — a lone perfect score on one axis is not a first place.'
+    '. [[robustness|Robustness]] and [[strictness]] dominate because both are correctness properties: a locator that breaks on a copy change, or that silently matches two elements, costs an afternoon. Speed differences, unless enormous, cost milliseconds. ' +
+    'Scores are renormalised over the components that applied, so strategies measured on fewer than three of the four are listed below the chart rather than ranked — a lone perfect score on one axis is not a first place. See [[composite|how the score is built]].'
   );
 
   const rowH = 22, padL = 168, padR = 56, padT = 8, padB = 28;
@@ -305,7 +629,7 @@ function tableView(sec, headers, rows, caption) {
   tableView(sec,
     ['Strategy', 'Family', 'Composite', 'Robust', 'Strict', 'Speed', 'Fail', 'Median q'],
     S.composite.map((r) => [
-      esc(r.strategyId) + (r.ranked === false ? ' <span class="chip meh">unranked</span>' : ''),
+      stratChip(r.strategyId) + (r.ranked === false ? ' <span class="chip meh">unranked</span>' : ''),
       esc(r.family), r.total === null ? '-' : r.total.toFixed(3),
       r.robustness === null ? 'n/a' : pct(r.robustness), pct(r.strictness),
       r.speed === null ? '-' : r.speed.toFixed(2),
@@ -322,7 +646,7 @@ function tableView(sec, headers, rows, caption) {
   if (rows.length < 2) return;
   const sec = section(
     'Speed against robustness',
-    'The trade-off, if there is one. Horizontal axis is median query cost at the largest DOM measured, on a log scale because the observed range spans several orders of magnitude. Vertical axis is the share of mutations the locator survived. Points are labelled directly; colour carries nothing here.' +
+    'The trade-off, if there is one. Horizontal axis is [[median]] query cost at the largest DOM measured, on a [[log-scale|log scale]] because the observed range spans several orders of magnitude. Vertical axis is the share of mutations the locator survived ([[robustness]]). Points are labelled directly; colour carries nothing here.' +
     (omitted.length
       ? ' Not plotted, because they were ambiguous before any mutation and have no robustness figure: ' +
         omitted.map((r) => '<code>' + esc(r.strategyId) + '</code>').join(', ') + '.'
@@ -415,9 +739,9 @@ function tableView(sec, headers, rows, caption) {
 
   const sec = section(
     'How cost scales with DOM size',
-    'Median net query cost per strategy across DOM tiers, log scale on both axes. ' +
+    '[[median|Median]] net query cost per strategy across [[dom-tier|DOM tiers]], [[log-scale|log scale]] on both axes. ' +
     (ranked.length > 6 ? 'Six representative strategies are drawn; the full set is in the table below. ' : '') +
-    'The horizontal band at the bottom is the measurement floor: anything inside it is not a measurement.'
+    'The horizontal band at the bottom is the [[noise-floor|measurement floor]]: anything inside it is not a measurement.'
   );
 
   const padL = 74, padR = 120, padT = 14, padB = 46;
@@ -515,7 +839,7 @@ function tableView(sec, headers, rows, caption) {
 
   const sec = section(
     'Robustness under change',
-    'Each column is a change a developer makes without thinking about tests. A cell is green only if the locator still resolves to the <em>same physical element</em>, verified through an attribute that no mutation touches. Resolving to one wrong element is scored worse than resolving to nothing, because it passes. ' +
+    'Each column is a change a developer makes without thinking about tests ([[robustness|what this measures]]). A cell is green only if the locator still resolves to the <em>same physical element</em>, verified through an attribute that no mutation touches. Resolving to one wrong element is scored worse than resolving to nothing, because it passes. ' +
     'Strategies that were already ambiguous <em>before</em> any mutation show <code>n/a</code>: a change cannot break what never worked, and scoring them zero here would charge them twice for a single flaw that the ambiguity sweep already measures.'
   );
 
@@ -600,13 +924,13 @@ function tableView(sec, headers, rows, caption) {
 
   const sec = section(
     'When a locator stops being unique',
-    'The same markup, repeated. Each cell is how many elements the locator matched. One is the only correct answer; anything else is a strict-mode failure waiting for production data. This is a correctness result, not a performance one.'
+    'The same markup, repeated. Each cell is how many elements the locator matched. One is the only correct answer; anything else is a [[strict-mode|strict-mode]] failure waiting for production data ([[strictness]]). This is a correctness result, not a performance one.'
   );
 
   const rows = ids.map((id) => {
     const v = S.ambiguity[id];
     return [
-      esc(id),
+      stratChip(id),
       ...sizes.map((n) => {
         const m = v.byCards[n];
         if (m === undefined) return '-';
@@ -635,7 +959,7 @@ function tableView(sec, headers, rows, caption) {
   if (!ids.length) return;
   const sec = section(
     'What a broken locator costs',
-    'Left: a locator that matches nothing, which pays the full timeout every time it runs. Right: a locator that matches several, which Playwright refuses outright. The second is far cheaper in wall clock and far cheaper to diagnose — which is an argument for strictness, not against it.'
+    'Left: a locator that matches nothing, which pays the full timeout every time it runs. Right: a locator that matches several, which Playwright refuses outright ([[strict-mode]]). The second is far cheaper in wall clock and far cheaper to diagnose — which is an argument for strictness, not against it.'
   );
 
   const rows = ids.map((id) => ({
@@ -711,7 +1035,7 @@ function tableView(sec, headers, rows, caption) {
 
   const sec = section(
     'Queries slower than ' + (S.slowThresholdMs / 1000) + ' second',
-    'Every measurement whose median reached the threshold, with where its target actually sits. ' +
+    'Every measurement whose [[median]] reached the threshold, with where its target actually sits ([[depth]]). ' +
     'Depth and page size are normally confounded — deeper pages tend to be bigger — so both are recorded, and the chart below this one varies depth at a fixed element count to separate them.'
   );
 
@@ -776,7 +1100,7 @@ function tableView(sec, headers, rows, caption) {
     '<thead><tr><th>Strategy</th><th class="num">Median</th><th class="num">Depth</th><th class="num">Siblings</th>' +
     '<th class="num">DOM nodes</th><th class="num">Matches</th><th class="num">n</th><th>Route</th><th>Ancestor path</th></tr></thead><tbody>' +
     S.slowQueries.map((q) =>
-      '<tr><td>' + esc(q.strategyId) + '</td>' +
+      '<tr><td>' + stratChip(q.strategyId) + '</td>' +
       '<td class="num">' + fmtMs(q.medianMs) +
         (q.timedOut ? ' <span class="chip no">timeout</span>' : '') + '</td>' +
       '<td class="num">' + (q.depth ?? '-') + '</td>' +
@@ -809,7 +1133,7 @@ function tableView(sec, headers, rows, caption) {
 
   const sec = section(
     'Depth on its own, at a fixed element count',
-    'The controlled version of the question above. Total elements are held constant while the number of levels between <body> and the target changes, so any movement here is attributable to depth rather than to page size. A flat line means depth costs that strategy nothing.'
+    'The controlled version of the question above. Total elements are held constant while the [[depth|number of levels]] between <body> and the target changes, so any movement here is attributable to depth rather than to page size. A flat line means depth costs that strategy nothing.'
   );
 
   const allDepths = [...new Set(complete.flatMap(depthsFor))].sort((a, b) => a - b);
@@ -891,7 +1215,7 @@ function tableView(sec, headers, rows, caption) {
   if (!rows.length) return;
   const sec = section(
     'Is the difference real?',
-    'Every strategy against <code>' + esc(S.reference) + '</code>, by Mann-Whitney U with tie correction. A verdict of <em>indistinguishable</em> means either the test did not reject, or the medians differ by less than the measurement floor for that page. Both are reasons not to claim a difference.'
+    'Every strategy against <code>' + esc(S.reference) + '</code>, by [[mann-whitney|Mann-Whitney U]] with tie correction. A verdict of <em>indistinguishable</em> means either the test did not reject ([[p-value]]), or the [[median|medians]] differ by less than the [[noise-floor|measurement floor]] for that page. Both are reasons not to claim a difference.'
   );
   const sorted = [...rows].sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0));
   const wrap = document.createElement('div');
@@ -900,7 +1224,7 @@ function tableView(sec, headers, rows, caption) {
   t.innerHTML =
     '<thead><tr><th>Strategy</th><th>Page shape</th><th class="num">x reference</th><th class="num">delta median</th><th class="num">p</th><th class="num">effect</th><th class="num">n</th><th class="num">verdict</th></tr></thead><tbody>' +
     sorted.map((c) =>
-      '<tr><td>' + esc(c.strategyId) + '</td><td>' + esc(c.key) + '</td>' +
+      '<tr><td>' + stratChip(c.strategyId) + '</td><td>' + esc(c.key) + '</td>' +
       '<td class="num">' + (c.ratio === null ? '-' : c.ratio.toFixed(1) + '×') + '</td>' +
       '<td class="num">' + fmtMs(c.medianDelta) + '</td>' +
       '<td class="num">' + (Number.isFinite(c.p) ? (c.p < 0.001 ? '<0.001' : c.p.toFixed(3)) : '-') + '</td>' +
@@ -910,6 +1234,38 @@ function tableView(sec, headers, rows, caption) {
     ).join('') + '</tbody>';
   wrap.appendChild(t);
   sec.appendChild(wrap);
+})();
+
+// --- glossary ---------------------------------------------------------------
+(function glossarySection() {
+  const sec = section(
+    'Glossary',
+    'Every term this page leans on, in plain language. Each entry also says why the study uses it — "p95" is easy to look up, "why p95 and not the mean here" is the part that makes the numbers readable. Dotted-underlined words anywhere on the page open the same definitions.'
+  );
+  sec.id = 'glossary-section';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'glossary-grid';
+  wrap.innerHTML = Object.entries(G)
+    .sort((a, b) => a[1].term.localeCompare(b[1].term))
+    .map(([key, g]) =>
+      '<div class="g-item">' +
+      '<div class="g-name"><button class="term" type="button" data-term="' + key + '" aria-expanded="false">' +
+      esc(g.term) + '</button></div>' +
+      '<div class="g-short">' + esc(g.short) + '</div></div>'
+    ).join('');
+  sec.appendChild(wrap);
+
+  if (S.referenceUrl) {
+    const p2 = document.createElement('p');
+    p2.className = 'lede';
+    p2.style.marginTop = '18px';
+    p2.innerHTML = 'For what each locator strategy actually executes — the literal call, with its cost, ' +
+      'robustness and strictness — see the ' +
+      '<a class="ref-link" href="' + esc(S.referenceUrl) + '" target="_blank" rel="noopener">locator reference</a>. ' +
+      'Strategy names on this page are clickable and show the same thing inline.';
+    sec.appendChild(p2);
+  }
 })();
 
 // --- theme toggle ----------------------------------------------------------

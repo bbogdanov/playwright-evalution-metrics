@@ -17,52 +17,12 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { STRATEGIES } from '../e2e/locators/strategies.ts';
+import { describeStrategies, EXAMPLE_TARGET as TARGET } from './strategy-calls.mjs';
+
+const CALLS = new Map(describeStrategies().map((s) => [s.id, s.call]));
 
 const OUT = resolve(process.env.BM_REFERENCE ?? 'docs/LOCATOR-REFERENCE.md');
 const SUMMARY = resolve('results/summary.json');
-
-// --- rendering the real call ------------------------------------------------
-const isRec = (v) =>
-  v !== null && (typeof v === 'object' || typeof v === 'function') && v.__path;
-
-const fmt = (v) => {
-  if (isRec(v)) return v.__path;
-  if (typeof v === 'string') return JSON.stringify(v);
-  if (v && typeof v === 'object') {
-    return '{ ' + Object.entries(v).map(([k, x]) => `${k}: ${fmt(x)}`).join(', ') + ' }';
-  }
-  return String(v);
-};
-
-const recorder = (path) =>
-  new Proxy(function () {}, {
-    get(_t, prop) {
-      if (prop === '__path') return path;
-      if (typeof prop !== 'string' || prop === 'then') return undefined;
-      return (...args) => recorder(`${path}.${prop}(${args.map(fmt).join(', ')})`);
-    },
-  });
-
-/**
- * A representative target: a grid cell at row 750, column 2, exactly as the
- * benchmark app renders it. Concrete values rather than placeholders, because
- * "getByRole(role, {name})" hides the thing a reader needs to see.
- */
-const TARGET = {
-  found: true, tag: 'button', role: 'button',
-  domId: 'cell-r750-c2', testIdAttr: 'data-testid', testId: 'cell.750.2',
-  qaId: 'ebc69256', accessibleName: 'Status for row 750', text: 'status-750-2-ft8o',
-  kind: 'cell', row: '750', col: '2',
-  semanticClass: 'bm-cell', variantClass: 'bm-cell--v2', hashedClass: '_a854d9',
-  cssChain: 'tr.bm-grid__row > td.bm-grid__cellwrap > button.bm-grid__cell.bm-cell.bm-cell--v2._a854d9',
-  cssChainScoped: 'td.bm-grid__cellwrap > button.bm-grid__cell',
-  xpathAbs: '/html/body/app-root/bm-grid/section/table/tbody/tr[751]/td[3]/button',
-  xpathRel: '//button[@aria-label="Status for row 750"]',
-  nthOfClass: 4502, nthOfRole: 4502, classMatchCount: 9000,
-  scopeTestId: 'row.750', inShadowRoot: false,
-  depth: 9, shadowHops: 0, siblingCount: 1,
-  ancestorTags: 'app-root>bm-grid>section>table>tbody>tr>td>button',
-};
 
 const FAMILY_TITLES = {
   identity: 'Identity — id, test id, generated unique attribute',
@@ -163,7 +123,7 @@ function main() {
     }
 
     const rows = STRATEGIES.filter((s) => s.family === family).map((s) => {
-      const call = s.build(recorder('page'), TARGET).__path;
+      const call = CALLS.get(s.id);
       const m = byId.get(s.id);
       return { s, call, m, cost: m?.speedMs ?? null, atFloor: m?.speedAtFloor };
     });
