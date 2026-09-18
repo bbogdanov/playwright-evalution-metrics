@@ -123,6 +123,11 @@ export const GLOSSARY = {
     short: 'How many element levels below <body> the target sits.',
     detail: 'Recorded on every measurement and counted through shadow boundaries. Depth and page size are normally confounded \u2014 deeper pages are usually bigger pages \u2014 so a separate scenario holds the element count fixed and varies only depth.',
   },
+  first: {
+    term: '.first()',
+    short: 'Takes the first match in document order instead of failing on several.',
+    detail: 'The usual way to silence a strict-mode violation, and the way to turn a loud failure into a silent wrong element. Whatever is first in document order wins, so an element inserted above your target quietly becomes your target. Strict mode was the thing protecting you from that.',
+  },
   'log-scale': {
     term: 'log scale',
     short: 'Each step on the axis is a multiplication, not an addition.',
@@ -927,6 +932,29 @@ function tableView(sec, headers, rows, caption) {
     'The same markup, repeated. Each cell is how many elements the locator matched. One is the only correct answer; anything else is a [[strict-mode|strict-mode]] failure waiting for production data ([[strictness]]). This is a correctness result, not a performance one.'
   );
 
+  const caveat = document.createElement('p');
+  caveat.className = 'lede';
+  caveat.style.marginTop = '16px';
+  caveat.innerHTML = gloss(
+    '<b>One row here is conditional.</b> The id strategies show <em>never</em> because the application ' +
+    'under test guarantees unique ids \u2014 that is a property of this fixture, not of the locator. ' +
+    'Duplicate ids are invalid HTML and happen constantly: a component rendered twice, a modal reusing ' +
+    'a template, a list that forgets to suffix its keys.'
+  );
+  sec.appendChild(caveat);
+
+  const measured = document.createElement('p');
+  measured.className = 'lede';
+  measured.innerHTML = gloss(
+    'Measured separately, with a duplicate id rendered <em>ahead</em> of the intended target: ' +
+    '<code>#id</code> and <code>id=</code> both match every duplicate and the action fails with a ' +
+    '[[strict-mode|strict mode]] violation \u2014 Playwright refuses to guess, which is the good outcome. ' +
+    'But <code>[[first|.first()]]</code>, the usual way to silence that violation, resolves to the ' +
+    'duplicate rather than the intended element, and so does <code>document.getElementById</code>. ' +
+    'So an id locator does not fail silently; an id locator with <code>.first()</code> does.'
+  );
+  sec.appendChild(measured);
+
   const rows = ids.map((id) => {
     const v = S.ambiguity[id];
     return [
@@ -950,7 +978,34 @@ function tableView(sec, headers, rows, caption) {
     rows.map((r) => '<tr>' + r.map((c, i) => '<td' + (i ? ' class="num"' : '') + '>' + c + '</td>').join('') + '</tr>').join('') +
     '</tbody>';
   wrap.appendChild(t);
-  sec.appendChild(wrap);
+  sec.insertBefore(wrap, caveat);
+
+  if (S.idCollision && S.idCollision.length) {
+    const h = document.createElement('p');
+    h.className = 'lede';
+    h.style.marginTop = '14px';
+    h.innerHTML = '<b>Id collisions, measured.</b>';
+    sec.appendChild(h);
+
+    const w2 = document.createElement('div');
+    w2.className = 'scroll';
+    const t2 = document.createElement('table');
+    t2.innerHTML =
+      '<thead><tr><th>Strategy</th><th class="num">Duplicates</th><th class="num">Matched</th>' +
+      '<th>Action outcome</th><th>.first() lands on</th><th>getElementById lands on</th></tr></thead><tbody>' +
+      S.idCollision.map((r) =>
+        '<tr><td>' + stratChip(r.strategyId) + '</td>' +
+        '<td class="num">' + r.duplicates + '</td>' +
+        '<td class="num">' + r.matches + '</td>' +
+        '<td><span class="chip ' + (r.matches === 1 ? 'ok' : 'no') + '">' + esc(r.strictOutcome) + '</span></td>' +
+        '<td><span class="chip ' + (r.firstResolvesToWrongElement ? 'no' : 'ok') + '">' +
+          (r.firstResolvesToWrongElement ? 'wrong element' : 'intended element') + '</span></td>' +
+        '<td><span class="chip ' + (r.nativeResolvesToWrongElement ? 'no' : 'ok') + '">' +
+          (r.nativeResolvesToWrongElement ? 'wrong element' : 'intended element') + '</span></td></tr>'
+      ).join('') + '</tbody>';
+    w2.appendChild(t2);
+    sec.appendChild(w2);
+  }
 })();
 
 // --- failure cost ----------------------------------------------------------

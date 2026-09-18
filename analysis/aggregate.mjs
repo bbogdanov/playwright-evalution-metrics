@@ -307,6 +307,23 @@ function main() {
     v.breaksAtCards = broke ? broke[0] : null;
   }
 
+  // --- id collisions (S5b) --------------------------------------------------
+  // Kept apart from the ambiguity sweep: that sweep repeats markup, which cannot
+  // break an id locator because the app guarantees unique ids. This measures what
+  // happens when that guarantee does not hold.
+  const idCollision = records
+    .filter((r) => r.metric === 'id_collision')
+    .map((r) => ({
+      strategyId: r.strategyId,
+      duplicates: r.dims.duplicateIds,
+      matches: r.matches,
+      selector: r.dims.selector,
+      strictOutcome: r.dims.strictOutcome,
+      firstResolvesToWrongElement: r.dims.firstResolvesToWrongElement,
+      nativeResolvesToWrongElement: r.dims.nativeResolvesToWrongElement,
+    }))
+    .sort((a, b) => a.duplicates - b.duplicates || a.strategyId.localeCompare(b.strategyId));
+
   // --- failure cost (S10) --------------------------------------------------
   const failure = {};
   for (const r of records) {
@@ -468,6 +485,7 @@ function main() {
     comparisons,
     robustness,
     ambiguity,
+    idCollision,
     failure,
     composite,
   };

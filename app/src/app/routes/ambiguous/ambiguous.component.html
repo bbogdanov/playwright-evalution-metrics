@@ -4,6 +4,19 @@
     last: <span data-testid="status.last-clicked.value">{{ log.last() }}</span>
   </p>
 
+  @if (idClashes().length) {
+    <!-- Duplicate ids, placed ahead of the canonical target in document order.
+         Invalid HTML on purpose: this is the case that decides whether an id
+         locator fails loudly or silently resolves to the wrong element. -->
+    <div class="bm-amb__clashes" data-testid="amb.id-clashes">
+      @for (i of idClashes(); track i) {
+        <button type="button" class="bm-clash" [attr.id]="canonicalId()"
+                [attr.data-clash]="i" [attr.aria-label]="copy.t('open')"
+                (click)="onClick(-1 - i)">{{ copy.t('open') }}</button>
+      }
+    </div>
+  }
+
   <div class="bm-amb__list" data-testid="amb.list">
     @for (i of cards(); track i) {
       <!-- The card wrapper is uniquely addressable; everything inside it is not. -->

@@ -65,6 +65,19 @@ export class BenchParams {
    */
   readonly targetIndex = computed(() => Math.trunc(this.num('target', -1)));
   /**
+   * Number of extra elements that deliberately reuse the canonical target's id.
+   *
+   * Duplicate ids are invalid HTML and happen constantly - a component rendered
+   * twice, a modal that reuses a template, a list that forgets to suffix. Without
+   * this knob the ambiguity sweep can never break an id locator, and "ids never
+   * collide" would be a property of this fixture masquerading as a finding.
+   *
+   * The duplicates render BEFORE the canonical target in document order, which is
+   * the case that matters: anything resolving by document order silently switches
+   * to the new element rather than failing.
+   */
+  readonly duplicateIds = computed(() => clamp(this.num('dupIds', 0), 0, 50));
+  /**
    * Which actionability gate the late-content route exercises. Each value blocks a
    * different part of Playwright's actionability loop, and they do not cost the same.
    */

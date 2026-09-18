@@ -42,6 +42,14 @@ export class AmbiguousComponent {
     Array.from({ length: Math.max(1, this.params.decoys()) }, (_, i) => i),
   );
 
+  /** Extra elements reusing the canonical target's id, rendered ahead of it. */
+  protected readonly idClashes = computed(() =>
+    Array.from({ length: this.params.duplicateIds() }, (_, i) => i),
+  );
+
+  /** The id the canonical target carries, so the clashes can reuse it verbatim. */
+  protected readonly canonicalId = computed(() => `action-r${this.targetCard()}`);
+
   /** Index of the card that owns the canonical, uniquely addressable target. */
   protected readonly targetCard = computed(() => {
     const explicit = this.params.targetIndex();
@@ -58,7 +66,7 @@ export class AmbiguousComponent {
   }
 
   private readonly token = computed(() =>
-    ['ambiguous', this.cards().length, this.targetCard(), this.params.locale()].join(':'),
+    ['ambiguous', this.cards().length, this.targetCard(), this.params.duplicateIds(), this.params.locale()].join(':'),
   );
 
   private readonly publishReady = afterRenderEffect(() => this.ready.set(this.token()));

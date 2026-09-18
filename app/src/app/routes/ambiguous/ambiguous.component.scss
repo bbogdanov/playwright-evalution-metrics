@@ -5,3 +5,6 @@
 .bm-card__title { font-size: 12px; margin: 0; }
 .bm-card__body { font-size: 11px; margin: 2px 0; color: #555; }
 .bm-card__action { font: 12px system-ui, sans-serif; }
+
+.bm-amb__clashes { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.bm-clash { font: 12px system-ui, sans-serif; border: 1px dashed #c0392b; background: #fff5f5; }
