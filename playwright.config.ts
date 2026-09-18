@@ -14,8 +14,11 @@ import { BASE_URL } from './e2e/harness/paths';
  *  - retries: 0. A retried timing sample is a timing sample taken under different
  *    conditions, and silently averaging it in would be dishonest.
  *  - trace: off for micro benchmarks. Tracing instruments every API call, which
- *    is precisely the thing being measured. It is on for macro scenarios, where
- *    the trace is the data source rather than an observer effect.
+ *    is precisely the thing being measured. Macro scenarios keep it only on
+ *    failure: an earlier revision recorded traces for every macro test on the
+ *    theory that they would be parsed for timings, nothing ever parsed them, and
+ *    the habit cost 128MB of artefacts per run for no reader. Mechanism data
+ *    comes from a CDP Chrome trace instead, which is a different mechanism.
  */
 export default defineConfig({
   testDir: './e2e',
@@ -30,7 +33,12 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   forbidOnly: !!process.env.CI,
-  reporter: [['list']],
+  reporter: [
+    ['list'],
+    // Playwright's own report, written inside the published site so it ships with
+    // the dashboard rather than living only on whoever ran the suite.
+    ['html', { outputFolder: 'results/dashboard/playwright-report', open: 'never' }],
+  ],
 
   use: {
     baseURL: BASE_URL,
@@ -61,7 +69,7 @@ export default defineConfig({
     {
       name: 'macro',
       testDir: './e2e/macro',
-      use: { trace: 'on', video: 'off', screenshot: 'off' },
+      use: { trace: 'retain-on-failure', video: 'off', screenshot: 'off' },
     },
     {
       // Driven one strategy per process by tools/run-suite-scale.mjs; sharing a
