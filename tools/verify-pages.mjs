@@ -52,8 +52,10 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [1280, 900, 'dark'], [390, 78
   const n = await cells.count();
   if (n !== 36) problems.push(`${tag}: ${n} cells, expected 36`);
 
-  const links = await page.locator('#headerLinks a').count();
-  if (links !== 2) problems.push(`${tag}: ${links} header links, expected 2`);
+  const hrefs = await page.locator('#headerLinks a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
+  for (const want of ['index.html', 'patterns.html']) {
+    if (!hrefs.includes(want)) problems.push(`${tag}: no header link to ${want} (${hrefs})`);
+  }
 
   // first, last, and one near the bottom edge so the flip-above path runs
   for (const i of [0, 20, n - 1]) {
@@ -126,6 +128,53 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [1280, 900, 'dark'], [390, 78
   await ctx.close();
 }
 
+// --- composition patterns page ----------------------------------------------
+for (const [w, h, theme] of [[1280, 900, 'light'], [390, 780, 'dark']]) {
+  const tag = `patterns ${w}x${h} ${theme}`;
+  const { ctx, page } = await check(`${out}/patterns.html`, w, h, theme, tag);
+
+  const cards = page.locator('article.pattern');
+  const n = await cards.count();
+  if (n < 12) problems.push(`${tag}: ${n} pattern cards, expected at least 12`);
+
+  // Every card must show both halves of its comparison, or it is not a comparison.
+  const halves = await cards.evaluateAll((els) =>
+    els.map((el) => ({
+      id: el.id,
+      dont: (el.querySelector('.side.dont code')?.textContent ?? '').trim().length,
+      do: (el.querySelector('.side.do code')?.textContent ?? '').trim().length,
+    })));
+  for (const c of halves) {
+    if (!c.dont || !c.do) problems.push(`${tag}: pattern ${c.id} is missing a ${c.dont ? 'DO' : "DON'T"} example`);
+  }
+
+  const chips = page.locator('button[data-proof]:not([disabled])');
+  const proved = await chips.count();
+  if (proved < 12) problems.push(`${tag}: ${proved} proved patterns, expected at least 12`);
+
+  for (const i of [0, Math.floor(proved / 2), proved - 1]) {
+    const chip = chips.nth(i);
+    await chip.scrollIntoViewIfNeeded();
+    await chip.click();
+    const pop = page.locator('#pop');
+    if (!(await pop.isVisible())) { problems.push(`${tag}: proof ${i} did not open`); continue; }
+    const box = await pop.boundingBox();
+    if (box.x < 0 || box.y < 0 || box.x + box.width > w + 1 || box.y + box.height > h + 1) {
+      problems.push(`${tag}: proof popover off-screen: ${JSON.stringify(box)}`);
+    }
+    if ((await pop.locator('.pop-row').count()) < 2) problems.push(`${tag}: proof ${i} has no figures`);
+    await page.keyboard.press('Escape');
+  }
+
+  const fingerprint = (await page.locator('#fingerprint').innerText()).trim();
+  if (!/patterns proved/.test(fingerprint)) problems.push(`${tag}: no run fingerprint (${fingerprint})`);
+
+  if (process.env.BM_SHOT && w === 1280) {
+    await page.screenshot({ path: `${process.env.BM_SHOT}/patterns-${theme}.png`, fullPage: true });
+  }
+  await ctx.close();
+}
+
 // --- dashboard regression ---------------------------------------------------
 {
   const tag = 'dashboard 1280 light';
@@ -139,6 +188,7 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [1280, 900, 'dark'], [390, 78
   await page.keyboard.press('Escape');
   const hrefs = await page.locator('#headerLinks a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
   if (!hrefs.includes('accessibility.html')) problems.push(`${tag}: no link to the matrix page (${hrefs})`);
+  if (!hrefs.includes('patterns.html')) problems.push(`${tag}: no link to the patterns page (${hrefs})`);
   // theme toggle still wired
   await page.locator('#themeToggle').click();
   const t = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));

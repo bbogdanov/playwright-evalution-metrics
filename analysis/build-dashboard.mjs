@@ -29,6 +29,11 @@ try {
 summary.strategies = describeStrategies();
 summary.referenceUrl = blobUrl('docs/LOCATOR-REFERENCE.md');
 
+// The composition patterns page, on the same terms.
+summary.patternsPage = existsSync(resolve(dirname(OUT), 'patterns.html'))
+  ? 'patterns.html'
+  : null;
+
 // The matrix page, when it has been generated. Relative, like the run report:
 // both are published side by side with this file.
 summary.accessibilityPage = existsSync(resolve(dirname(OUT), 'accessibility.html'))
@@ -47,5 +52,6 @@ console.log(
   `Wrote ${OUT} (${(readFileSync(OUT).length / 1024).toFixed(0)} kB, ` +
   `${summary.strategies.length} strategy definitions, reference ${summary.referenceUrl ? 'linked' : 'not linked'}, ` +
   `run report ${summary.playwrightReport ? 'linked' : 'absent'}, ` +
-  `matrix page ${summary.accessibilityPage ? 'linked' : 'absent'})`,
+  `matrix page ${summary.accessibilityPage ? 'linked' : 'absent'}, ` +
+  `patterns page ${summary.patternsPage ? 'linked' : 'absent'})`,
 );

@@ -12,7 +12,7 @@
  *
  * Self-contained, like the dashboard: no CDN, no build step, no network.
  */
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { STATUS } from './palette.mjs';
 import { tokenBlock, SHELL_STYLES, SHELL_SCRIPT } from './page-shell.mjs';
@@ -275,7 +275,11 @@ ${LEVELS.map((l) => `    ${esc(l.title.toLowerCase())} ${esc(MEASURED.roleByTier
 <script id="cells" type="application/json">${JSON.stringify(CELLS).replace(/</g, '\\u003c')}</script>
 <script>
 const CELLS = JSON.parse(document.getElementById('cells').textContent);
-const LINKS = ${JSON.stringify({ dashboard: 'index.html', doc: blobUrl('docs/ACCESSIBILITY-AND-TEST-LEVELS.md') }).replace(/</g, '\\u003c')};
+const LINKS = ${JSON.stringify({
+  dashboard: 'index.html',
+  patterns: existsSync(resolve(dirname(OUT), 'patterns.html')) ? 'patterns.html' : null,
+  doc: blobUrl('docs/ACCESSIBILITY-AND-TEST-LEVELS.md'),
+}).replace(/</g, '\\u003c')};
 ${SHELL_SCRIPT}
 
 function cellHtml(key) {
@@ -297,6 +301,9 @@ document.addEventListener('click', (e) => {
 
 (function headerLinks() {
   const parts = ['<a class="ref-link" href="' + esc(LINKS.dashboard) + '">&larr; Measured results dashboard</a>'];
+  if (LINKS.patterns) {
+    parts.push('<a class="ref-link" href="' + esc(LINKS.patterns) + '">Composition patterns &rarr;</a>');
+  }
   if (LINKS.doc) {
     parts.push('<a class="ref-link" href="' + esc(LINKS.doc) + '" target="_blank" rel="noopener">' +
                'The long-form argument, with the measurements behind it &rarr;</a>');

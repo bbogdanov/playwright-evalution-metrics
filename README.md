@@ -40,6 +40,7 @@ failure cost, then ranks on a composite.
 | S11 | Suite wall clock | Does any of it change the CI bill? |
 | S12 | Depth at fixed element count | Does depth cost anything on its own? |
 | S13 | Accessibility | What do the expensive locators buy that the cheap ones cannot? |
+| S14 | Composition patterns | How do locators behave in fixtures, chains and assertions? |
 
 31 locator strategies across eight families, all resolving to the **same physical
 element** — the descriptor is read back out of the rendered DOM, so the spec
@@ -66,13 +67,16 @@ npm run bench              # every project
 npm run bench:micro        # S1, S2, S7, S12
 npm run bench:macro        # S3, S4, S8, S9, S10
 npm run bench:a11y         # S13
+npm run bench:patterns     # S14, writes results/composition.json
 npx playwright test --project=robustness   # S5, S6
 node tools/run-suite-scale.mjs             # S11
 
 npm run report             # aggregate + both pages + both generated documents
 npm run reference          # regenerate the locator reference on its own
 npm run accessibility-page # regenerate the test-level matrix page on its own
+npm run patterns-page      # regenerate the composition patterns page on its own
 npm run matrix-doc         # regenerate the matrix table inside the document
+npm run composition-doc    # regenerate docs/LOCATOR-COMPOSITION.md
 npm run verify:pages       # open both generated pages in a browser and check them
 
 ./tools/stop-bench.sh      # stop a run completely, workers included
@@ -90,7 +94,9 @@ an environment.
 
 Open `results/dashboard/index.html` directly from disk — it has no network
 dependencies. `results/dashboard/accessibility.html` sits beside it and holds the
-test-level matrix, where every Yes/No opens the reasoning and an example.
+test-level matrix, where every Yes/No opens the reasoning and an example;
+`results/dashboard/patterns.html` holds the composition patterns, where every chip
+opens what that pattern did when it ran.
 
 `npm run analyze` also prints every query whose median reached one second,
 together with its target's depth, sibling count and ancestor path. The threshold
@@ -141,6 +147,30 @@ The matrix is rendered as a page as well — `results/dashboard/accessibility.ht
 linked from the dashboard header — where every cell opens the reasoning behind
 that verdict and the code it recommends. Page and document are generated from the
 same `analysis/a11y-matrix.mjs`, so they cannot drift apart.
+
+## How locators compose
+
+Every other scenario measures one locator against one element. Nobody writes tests
+that way. S14 takes the compositions people actually write — a fixture handing out a
+locator, a page object, a chain, an index, an awaited value — and pairs each with the
+form it should have been. Thirteen pairs, each proved rather than asserted:
+
+| | Don't | Do | Measured |
+|---|---|---|---|
+| Scope a role query | `page.getByRole(...)` | `row.getByRole(...)` | 208 ms → **38 ms** |
+| Chain from a unique root | `page.locator('tr').locator('td')...` | `grid.row(750).locator('td')...` | 2.01 s → **35 ms** |
+| Filter a narrow set | `getByRole('row').filter({ hasText })` | `getByTestId('row.750')` | 178 ms → **9 ms** |
+| Wait without sleeping | `waitForTimeout(3000)` | `expect(...).toHaveCount(1)` | 3.02 s → **802 ms** |
+
+The other nine are not about speed — they are about the DON'T quietly producing the
+wrong answer, and each one records what it produced: an element handle detached by a
+re-render, `.first()` resolving to a decoy that reuses the target's id, `nth(2)`
+moving to another column when the template reorders, `count()` returning 0 while the
+control is still 800 ms away, `all()` handing back positions that no longer hold.
+
+The examples on the page and in
+[docs/LOCATOR-COMPOSITION.md](docs/LOCATOR-COMPOSITION.md) are extracted from the
+scenario source between markers, so what is published is the code that ran.
 
 ## Methodology
 
@@ -269,12 +299,13 @@ reference still matches what the generator produces.
 
 ```
 app/                Angular 22 subject application (Material + CDK)
-docs/               generated locator reference, accessibility and test-level guidance
+docs/               generated locator reference and composition patterns, accessibility guidance
 e2e/harness/        measurement primitives, fixtures, env capture, record emitter
 e2e/locators/       the strategy matrix and the DOM descriptor
-e2e/micro|macro|robustness|a11y|suite/   the scenarios
+e2e/micro|macro|robustness|a11y|patterns|suite/   the scenarios
 analysis/           aggregation, statistics, dashboard generation
 tools/              static server, S11 driver
 results/raw/        append-only NDJSON, one file per worker per run
+results/composition.json   S14 proofs, kept out of the raw stream on purpose
 results/dashboard/  generated HTML
 ```

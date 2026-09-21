@@ -94,6 +94,14 @@ export default defineConfig({
       use: { trace: 'retain-on-failure', video: 'off', screenshot: 'off' },
     },
     {
+      // Composition patterns (S14). Records correctness proofs and a handful of
+      // paired timings into results/composition.json rather than the raw stream,
+      // so a short pattern run cannot replace a full benchmark's summary.
+      name: 'patterns',
+      testDir: './e2e/patterns',
+      use: { trace: 'retain-on-failure', video: 'off', screenshot: 'off' },
+    },
+    {
       name: 'robustness',
       testDir: './e2e/robustness',
       use: { trace: 'off', video: 'off', screenshot: 'off' },

@@ -372,6 +372,10 @@ document.addEventListener('click', (e) => {
     parts.push('<a class="ref-link" href="' + esc(S.accessibilityPage) + '">' +
                'Accessibility and test levels — which locator at which level →</a>');
   }
+  if (S.patternsPage) {
+    parts.push('<a class="ref-link" href="' + esc(S.patternsPage) + '">' +
+               'Composition patterns — fixtures, chaining, waiting, proved →</a>');
+  }
   if (S.playwrightReport) {
     parts.push('<a class="ref-link" href="' + esc(S.playwrightReport) + '">' +
                'Playwright run report — every test, timing and failure →</a>');
