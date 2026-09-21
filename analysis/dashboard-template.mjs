@@ -123,6 +123,11 @@ export const GLOSSARY = {
     short: 'How many element levels below <body> the target sits.',
     detail: 'Recorded on every measurement and counted through shadow boundaries. Depth and page size are normally confounded \u2014 deeper pages are usually bigger pages \u2014 so a separate scenario holds the element count fixed and varies only depth.',
   },
+  'role-cost': {
+    term: 'why role locators cost more',
+    short: 'They resolve the accessibility tree; no DOM API does that for you.',
+    detail: 'No browser API answers "which elements have this role and this accessible name", so Playwright computes an accessible name for every candidate of that role \u2014 following aria-label, aria-labelledby, associated labels, alt, title and text content in specification order. That is the cost, and it is also the value: if the name cannot be computed there is no name, and the locator failing is a defect report rather than a test problem.',
+  },
   first: {
     term: '.first()',
     short: 'Takes the first match in document order instead of failing on several.',
@@ -1293,6 +1298,82 @@ function tableView(sec, headers, rows, caption) {
     ).join('') + '</tbody>';
   wrap.appendChild(t);
   sec.appendChild(wrap);
+})();
+
+// --- accessibility: what the fast locators cannot see -----------------------
+(function accessibility() {
+  const a = S.accessibility;
+  if (!a || (!a.blindness?.length && !a.scans?.length)) return;
+
+  const sec = section(
+    'What the fast locators cannot see',
+    'The counterweight to every other section. [[role-cost|The expensive families are expensive]] because they ' +
+    'resolve the accessibility tree, and that is the same work a screen reader does — so they fail when there ' +
+    'is nothing to resolve. The same controls are rendered twice, correct and deliberately broken, and both ' +
+    'kinds of locator are asked to find them.'
+  );
+
+  if (a.blindness?.length) {
+    const wrap = document.createElement('div');
+    wrap.className = 'scroll';
+    const t = document.createElement('table');
+    t.innerHTML =
+      '<thead><tr><th>Regression</th><th class="num">Test id: correct → broken</th>' +
+      '<th class="num">Accessible locator: correct → broken</th><th>Verdict</th></tr></thead><tbody>' +
+      a.blindness.map((b) =>
+        '<tr><td>' + esc(b.what) + ' <span class="chip meh">' + esc(b.defect) + '</span></td>' +
+        '<td class="num">' + b.identityClean + ' → <b>' + b.identityBroken + '</b></td>' +
+        '<td class="num">' + b.accessibleClean + ' → <b>' + b.accessibleBroken + '</b></td>' +
+        '<td><span class="chip ' + (b.accessibleCaught ? 'ok' : 'no') + '">' +
+          (b.identityBlind && b.accessibleCaught
+            ? 'test id blind, accessible locator caught it'
+            : 'inconclusive') + '</span></td></tr>'
+      ).join('') + '</tbody>';
+    wrap.appendChild(t);
+    sec.appendChild(wrap);
+
+    const note = document.createElement('p');
+    note.className = 'lede';
+    note.style.marginTop = '14px';
+    note.innerHTML = 'The identity locator is <em>unchanged</em> by every one of these regressions. A suite ' +
+      'written entirely on test ids stays green while the interface becomes unusable with a screen reader.';
+    sec.appendChild(note);
+  }
+
+  if (a.scans?.length) {
+    const h = document.createElement('p');
+    h.className = 'lede';
+    h.style.marginTop = '16px';
+    h.innerHTML = '<b>axe-core scan of the same two pages.</b>';
+    sec.appendChild(h);
+
+    const w2 = document.createElement('div');
+    w2.className = 'scroll';
+    const t2 = document.createElement('table');
+    t2.innerHTML =
+      '<thead><tr><th>Page</th><th class="num">Violations</th><th class="num">Affected nodes</th>' +
+      '<th class="num">Scan</th><th>Rules</th></tr></thead><tbody>' +
+      a.scans.map((r) =>
+        '<tr><td>' + (r.defects ? 'With defects' : 'Corrected') + '</td>' +
+        '<td class="num"><span class="chip ' + (r.violations ? 'no' : 'ok') + '">' + r.violations + '</span></td>' +
+        '<td class="num">' + r.affectedNodes + '</td>' +
+        '<td class="num">' + fmtMs(r.scanMs) + '</td>' +
+        '<td style="white-space:normal;font-size:11px;color:var(--text-muted)">' + esc(r.rules || '—') + '</td></tr>'
+      ).join('') + '</tbody>';
+    w2.appendChild(t2);
+    sec.appendChild(w2);
+
+    const caveat = document.createElement('p');
+    caveat.className = 'lede';
+    caveat.style.marginTop = '14px';
+    caveat.innerHTML = '<b>A clean scan is weaker evidence than it looks.</b> The icon button in this page ' +
+      'originally used a \u{1F5D1} emoji as its only content, and axe reported no missing-name violation at all — ' +
+      'the emoji counts as the accessible name, so the button passed the scan while announcing itself as ' +
+      '"wastebasket". It only became detectable once the glyph was hidden from the accessibility tree. A ' +
+      'role-based locator that resolves <em>to the name you expected</em> is the stronger signal, because it ' +
+      'asserts the name is right rather than merely present.';
+    sec.appendChild(caveat);
+  }
 })();
 
 // --- glossary ---------------------------------------------------------------

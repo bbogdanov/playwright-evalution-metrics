@@ -39,6 +39,7 @@ failure cost, then ranks on a composite.
 | S10 | Failure cost | What does a broken locator cost in wall clock and in diagnosis? |
 | S11 | Suite wall clock | Does any of it change the CI bill? |
 | S12 | Depth at fixed element count | Does depth cost anything on its own? |
+| S13 | Accessibility | What do the expensive locators buy that the cheap ones cannot? |
 
 31 locator strategies across eight families, all resolving to the **same physical
 element** — the descriptor is read back out of the rendered DOM, so the spec
@@ -64,6 +65,7 @@ npm run app:build          # production build; ng serve would contaminate timing
 npm run bench              # every project
 npm run bench:micro        # S1, S2, S7, S12
 npm run bench:macro        # S3, S4, S8, S9, S10
+npm run bench:a11y         # S13
 npx playwright test --project=robustness   # S5, S6
 node tools/run-suite-scale.mjs             # S11
 
@@ -72,6 +74,11 @@ npm run reference          # regenerate the locator reference on its own
 
 ./tools/stop-bench.sh      # stop a run completely, workers included
 ```
+
+Partial-suite scripts write their Playwright report to a scratch directory, not
+to the published one. The HTML reporter clears its output folder on every run, so
+without that a `npm run bench:a11y` would silently replace a 47-test published
+report with a 3-test one. Only a full `npm run bench` writes the published report.
 
 `results/raw/` is append-only and can hold several runs. `npm run analyze`
 analyses the newest one and says which it ignored; `BM_RUN=<id>` picks one, and
@@ -100,9 +107,31 @@ under test:
 /shadow?enc=shadow&rows=150       encapsulation
 /virtual?rows=20000&virtual=1     virtual scrolling
 /material?dup=24&cols=5           CDK overlays
+/a11y?rows=20&defects=1           accessibility defects (defects=0 is the fix)
 ```
 
 Mutations apply to any route: `?mutate=locale,classHash,wrap,reorder,reword,attrRename,classRename`
+
+## The other half of the story
+
+Read on its own, this project says "role and text locators are slow, use test
+ids". That conclusion is wrong, and
+[docs/ACCESSIBILITY-AND-TEST-LEVELS.md](docs/ACCESSIBILITY-AND-TEST-LEVELS.md) is
+the counterweight.
+
+`getByRole` is expensive because it resolves the accessibility tree — the same
+work a screen reader does. S13 measures what that buys: with an icon button
+stripped of its accessible name, an input stripped of its label, and an image
+stripped of its alt text, `getByTestId` finds all three in **both** the correct
+and the broken page, while the accessible locators stop resolving. A suite
+written entirely on test ids stays green through all three regressions.
+
+Cost also depends entirely on scale: `role.name` is **1.7 ms** at 434 elements
+and **588 ms** at 120,034. That document carries the
+**test-level × locator matrix** — unit, integration, smoke, E2E — and the short
+version is: use accessible locators by default at unit and integration scale
+where they are effectively free, scope them at E2E scale, and never let the cost
+figures in this repo talk you out of them on a small DOM.
 
 ## Methodology
 
@@ -231,10 +260,10 @@ reference still matches what the generator produces.
 
 ```
 app/                Angular 22 subject application (Material + CDK)
-docs/               generated locator reference
+docs/               generated locator reference, accessibility and test-level guidance
 e2e/harness/        measurement primitives, fixtures, env capture, record emitter
 e2e/locators/       the strategy matrix and the DOM descriptor
-e2e/micro|macro|robustness|suite/   the scenarios
+e2e/micro|macro|robustness|a11y|suite/   the scenarios
 analysis/           aggregation, statistics, dashboard generation
 tools/              static server, S11 driver
 results/raw/        append-only NDJSON, one file per worker per run

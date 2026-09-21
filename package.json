@@ -11,14 +11,17 @@
     "app:build": "npm --prefix app run build -- --configuration production",
     "app:serve": "node tools/static-server.mjs",
     "bench": "playwright test",
-    "bench:micro": "playwright test --project=micro",
-    "bench:macro": "playwright test --project=macro",
+    "bench:micro": "BM_HTML_REPORT=results/.partial-report playwright test --project=micro",
+    "bench:macro": "BM_HTML_REPORT=results/.partial-report playwright test --project=macro",
     "analyze": "node analysis/aggregate.mjs",
     "dashboard": "node analysis/build-dashboard.mjs",
     "report": "npm run analyze && npm run dashboard && npm run reference",
-    "reference": "node analysis/strategy-reference.mjs"
+    "reference": "node analysis/strategy-reference.mjs",
+    "bench:a11y": "BM_HTML_REPORT=results/.partial-report playwright test --project=a11y",
+    "bench:robustness": "BM_HTML_REPORT=results/.partial-report playwright test --project=robustness"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "1.63.0",
     "@types/node": "^22.10.0",
     "typescript": "~5.9.0"

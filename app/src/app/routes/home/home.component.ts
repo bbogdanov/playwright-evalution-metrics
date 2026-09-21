@@ -56,6 +56,7 @@ export class HomeComponent {
     { path: 'shadow', query: 'enc=shadow&rows=60&cols=8', stresses: 'Shadow DOM piercing, encapsulation cost (S7)' },
     { path: 'virtual', query: 'rows=20000&virtual=1', stresses: 'Target not in DOM, scroll-and-retry (S9)' },
     { path: 'material', query: 'dup=30&cols=6&rows=200', stresses: 'CDK overlays and portals, real ARIA roles (S8)' },
+    { path: 'a11y', query: 'rows=20&defects=1', stresses: 'Accessibility defects the fast locators cannot see (S13)' },
   ];
 
   protected parse(query: string): Record<string, string> {

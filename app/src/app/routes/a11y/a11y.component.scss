@@ -1,0 +1,11 @@
+.bm-a11y-page { padding: 12px; font: 13px system-ui, sans-serif; background: #fff; }
+.bm-status { font: 12px monospace; }
+.bm-a11y-set { display: flex; align-items: center; gap: 10px; border: 1px solid #ddd; margin: 0 0 4px; padding: 4px 8px; }
+.bm-a11y-set legend { font-size: 11px; color: #333; }
+.bm-icon-btn { font-size: 14px; cursor: pointer; background: #fff; border: 1px solid #999; color: #111; }
+.bm-field-text { font-size: 12px; color: #222; }
+.bm-a11y-input { font: 12px system-ui, sans-serif; border: 1px solid #767676; padding: 1px 4px; }
+.bm-a11y-img { width: 16px; height: 16px; background: #555; }
+.bm-a11y-note { font-size: 12px; margin: 0; color: #595959; }
+/* ~2.3:1 against white: below the 4.5:1 that WCAG AA requires for body text. */
+.bm-low-contrast { color: #b3b3b3; }

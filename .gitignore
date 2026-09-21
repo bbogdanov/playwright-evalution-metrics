@@ -3,6 +3,7 @@ app/node_modules/
 app/dist/
 app/.angular/
 results/raw/
+results/.partial-report/
 
 test-results/
 /playwright-report/
