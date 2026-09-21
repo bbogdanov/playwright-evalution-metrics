@@ -15,10 +15,13 @@
     "bench:macro": "BM_HTML_REPORT=results/.partial-report playwright test --project=macro",
     "analyze": "node analysis/aggregate.mjs",
     "dashboard": "node analysis/build-dashboard.mjs",
-    "report": "npm run analyze && npm run dashboard && npm run reference",
+    "report": "npm run analyze && npm run accessibility-page && npm run dashboard && npm run reference && npm run matrix-doc",
     "reference": "node analysis/strategy-reference.mjs",
     "bench:a11y": "BM_HTML_REPORT=results/.partial-report playwright test --project=a11y",
-    "bench:robustness": "BM_HTML_REPORT=results/.partial-report playwright test --project=robustness"
+    "bench:robustness": "BM_HTML_REPORT=results/.partial-report playwright test --project=robustness",
+    "accessibility-page": "node analysis/build-accessibility-page.mjs",
+    "matrix-doc": "node analysis/a11y-matrix-doc.mjs",
+    "verify:pages": "node tools/verify-pages.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

@@ -69,8 +69,11 @@ npm run bench:a11y         # S13
 npx playwright test --project=robustness   # S5, S6
 node tools/run-suite-scale.mjs             # S11
 
-npm run report             # aggregate + dashboard + docs/LOCATOR-REFERENCE.md
+npm run report             # aggregate + both pages + both generated documents
 npm run reference          # regenerate the locator reference on its own
+npm run accessibility-page # regenerate the test-level matrix page on its own
+npm run matrix-doc         # regenerate the matrix table inside the document
+npm run verify:pages       # open both generated pages in a browser and check them
 
 ./tools/stop-bench.sh      # stop a run completely, workers included
 ```
@@ -86,7 +89,8 @@ analyses the newest one and says which it ignored; `BM_RUN=<id>` picks one, and
 an environment.
 
 Open `results/dashboard/index.html` directly from disk — it has no network
-dependencies.
+dependencies. `results/dashboard/accessibility.html` sits beside it and holds the
+test-level matrix, where every Yes/No opens the reasoning and an example.
 
 `npm run analyze` also prints every query whose median reached one second,
 together with its target's depth, sibling count and ancestor path. The threshold
@@ -132,6 +136,11 @@ and **588 ms** at 120,034. That document carries the
 version is: use accessible locators by default at unit and integration scale
 where they are effectively free, scope them at E2E scale, and never let the cost
 figures in this repo talk you out of them on a small DOM.
+
+The matrix is rendered as a page as well — `results/dashboard/accessibility.html`,
+linked from the dashboard header — where every cell opens the reasoning behind
+that verdict and the code it recommends. Page and document are generated from the
+same `analysis/a11y-matrix.mjs`, so they cannot drift apart.
 
 ## Methodology
 
@@ -233,7 +242,7 @@ byte-identical DOM across runs and machines.
 
 ## Publishing
 
-`.github/workflows/pages.yml` deploys `results/dashboard/index.html` to GitHub
+`.github/workflows/pages.yml` deploys `results/dashboard/` to GitHub
 Pages on every push to `main`. **It needs one manual step, once**, before the
 first deploy can succeed:
 

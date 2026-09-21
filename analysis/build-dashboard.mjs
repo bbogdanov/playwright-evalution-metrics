@@ -9,37 +9,14 @@
  * baked into summary.json, so the page can gain it without re-running a
  * 45-minute benchmark.
  */
-import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { renderHtml } from './dashboard-template.mjs';
 import { describeStrategies } from './strategy-calls.mjs';
+import { blobUrl } from './repo-link.mjs';
 
 const IN = resolve('results/summary.json');
 const OUT = resolve(process.env.BM_DASHBOARD ?? 'results/dashboard/index.html');
-
-/**
- * URL of the committed locator reference.
- *
- * Derived from the git remote so a fork points at its own copy. The branch comes
- * from the upstream tracking ref rather than the local branch name — a local
- * branch that was never pushed would produce a dead link.
- */
-function referenceUrl() {
-  const git = (cmd) => {
-    try {
-      return execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-    } catch {
-      return '';
-    }
-  };
-  const remote = git('git config --get remote.origin.url');
-  const slug = remote.match(/github\.com[:/](.+?)(?:\.git)?$/)?.[1];
-  if (!slug) return null;
-  const upstream = git('git rev-parse --abbrev-ref --symbolic-full-name @{u}');
-  const branch = upstream.replace(/^[^/]+\//, '') || 'main';
-  return `https://github.com/${slug}/blob/${branch}/docs/LOCATOR-REFERENCE.md`;
-}
 
 let summary;
 try {
@@ -50,7 +27,13 @@ try {
 }
 
 summary.strategies = describeStrategies();
-summary.referenceUrl = referenceUrl();
+summary.referenceUrl = blobUrl('docs/LOCATOR-REFERENCE.md');
+
+// The matrix page, when it has been generated. Relative, like the run report:
+// both are published side by side with this file.
+summary.accessibilityPage = existsSync(resolve(dirname(OUT), 'accessibility.html'))
+  ? 'accessibility.html'
+  : null;
 
 // Playwright's own run report, when the suite has produced one. Relative, so the
 // link works both from disk and from the published site.
@@ -63,5 +46,6 @@ writeFileSync(OUT, renderHtml(summary));
 console.log(
   `Wrote ${OUT} (${(readFileSync(OUT).length / 1024).toFixed(0)} kB, ` +
   `${summary.strategies.length} strategy definitions, reference ${summary.referenceUrl ? 'linked' : 'not linked'}, ` +
-  `run report ${summary.playwrightReport ? 'linked' : 'absent'})`,
+  `run report ${summary.playwrightReport ? 'linked' : 'absent'}, ` +
+  `matrix page ${summary.accessibilityPage ? 'linked' : 'absent'})`,
 );
