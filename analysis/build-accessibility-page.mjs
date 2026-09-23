@@ -12,14 +12,15 @@
  *
  * Self-contained, like the dashboard: no CDN, no build step, no network.
  */
-import { existsSync, writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { STATUS } from './palette.mjs';
-import { tokenBlock, SHELL_STYLES, SHELL_SCRIPT } from './page-shell.mjs';
+import { tokenBlock, SHELL_STYLES, SHELL_SCRIPT, NAV_STYLES, NAV_SCRIPT, siteNav } from './page-shell.mjs';
 import { LEVELS, ROWS, MEASURED } from './a11y-matrix.mjs';
 import { blobUrl } from './repo-link.mjs';
 
 const OUT = resolve(process.env.BM_A11Y_PAGE ?? 'results/dashboard/accessibility.html');
+const DOC_URL = blobUrl('docs/ACCESSIBILITY-AND-TEST-LEVELS.md');
 
 const esc = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -194,6 +195,7 @@ td.cell { width: 17.5%; }
 #pop .pop-verdict.v-yes { color: ${STATUS.good}; }
 #pop .pop-verdict.v-no { color: ${STATUS.critical}; }
 ${SHELL_STYLES}
+${NAV_STYLES}
 @media (max-width: 900px) { .levels { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) {
   .wrap { padding: 20px 16px 72px; }
@@ -203,16 +205,16 @@ ${SHELL_STYLES}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <button class="toggle" id="themeToggle" type="button">Theme</button>
+${siteNav('accessibility', dirname(OUT))}
+<main class="wrap" id="main" tabindex="-1">
   <header>
     <h1>Accessibility and test levels</h1>
     <p class="sub">
       Which of the expensive locators to reach for, at which test level, and what each verdict rests on.
       Click any cell for the reasoning and an example.
     </p>
-    <p class="sub" id="headerLinks"></p>
-  </header>
+${DOC_URL ? `    <p class="sub"><a class="ref-link" href="${esc(DOC_URL)}" target="_blank" rel="noopener">The long-form argument, with the measurements behind it &rarr;</a></p>
+` : ''}  </header>
 
   <div class="claim">
     The rest of this project measures locators as a cost. This page is the counterweight:
@@ -270,17 +272,13 @@ ${ROWS.map((r) => '        ' + bodyRow(r)).join('\n')}
     ${MEASURED.floorMs} ms &nbsp;·&nbsp; getByRole + name
 ${LEVELS.map((l) => `    ${esc(l.title.toLowerCase())} ${esc(MEASURED.roleByTier[l.id] ?? '-')}`).join(' /\n')}
   </p>
-</div>
+</main>
 <div id="pop" role="dialog" aria-modal="false" aria-label="Why this verdict"></div>
 <script id="cells" type="application/json">${JSON.stringify(CELLS).replace(/</g, '\\u003c')}</script>
 <script>
 const CELLS = JSON.parse(document.getElementById('cells').textContent);
-const LINKS = ${JSON.stringify({
-  dashboard: 'index.html',
-  patterns: existsSync(resolve(dirname(OUT), 'patterns.html')) ? 'patterns.html' : null,
-  doc: blobUrl('docs/ACCESSIBILITY-AND-TEST-LEVELS.md'),
-}).replace(/</g, '\\u003c')};
 ${SHELL_SCRIPT}
+${NAV_SCRIPT}
 
 function cellHtml(key) {
   const c = CELLS[key];
@@ -298,18 +296,6 @@ document.addEventListener('click', (e) => {
   e.stopPropagation();
   openPop(cell, cellHtml(cell.dataset.cell));
 });
-
-(function headerLinks() {
-  const parts = ['<a class="ref-link" href="' + esc(LINKS.dashboard) + '">&larr; Measured results dashboard</a>'];
-  if (LINKS.patterns) {
-    parts.push('<a class="ref-link" href="' + esc(LINKS.patterns) + '">Composition patterns &rarr;</a>');
-  }
-  if (LINKS.doc) {
-    parts.push('<a class="ref-link" href="' + esc(LINKS.doc) + '" target="_blank" rel="noopener">' +
-               'The long-form argument, with the measurements behind it &rarr;</a>');
-  }
-  document.getElementById('headerLinks').innerHTML = parts.join(' &nbsp;·&nbsp; ');
-})();
 </script>
 </body>
 </html>`;

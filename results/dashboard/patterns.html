@@ -124,9 +124,6 @@ header h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
 .sub { color: var(--text-secondary); margin: 0 0 6px; max-width: 78ch; }
 h2 { font-size: 17px; margin: 40px 0 6px; letter-spacing: -0.005em; }
 .lede { color: var(--text-secondary); margin: 0 0 18px; max-width: 78ch; }
-.jump { margin: 18px 0 26px; font-size: 13px; color: var(--text-muted); }
-.jump a { color: var(--series-1); text-decoration: none; }
-.jump a:hover { text-decoration: underline; }
 
 .pattern {
   background: var(--surface-1);
@@ -277,27 +274,110 @@ h2 { font-size: 17px; margin: 40px 0 6px; letter-spacing: -0.005em; }
   padding: 4px 10px; cursor: pointer;
 }
 
+
+:root { --nav-h: 48px; }
+[id] { scroll-margin-top: calc(var(--nav-h) + 12px); }
+.skip-link { position: absolute; left: 8px; top: -40px; z-index: 80; background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+.skip-link:focus { top: 8px; }
+.site-nav {
+  position: sticky; top: 0; z-index: 70; height: var(--nav-h);
+  display: flex; align-items: center; gap: 2px; padding: 0 16px;
+  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  font: 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.site-brand { font-weight: 650; margin-right: 14px; white-space: nowrap; }
+.site-pages { display: flex; gap: 2px; }
+.site-nav a { color: var(--text-secondary); text-decoration: none; padding: 8px 10px; border-radius: 6px; white-space: nowrap; }
+.site-nav a:hover, .site-nav a:focus-visible { color: var(--text-primary); background: var(--plane); outline: none; }
+.site-nav a[aria-current="page"] { color: var(--text-primary); background: var(--plane); box-shadow: inset 0 -2px 0 var(--series-1); }
+.site-sep { width: 1px; height: 20px; background: var(--border); margin: 0 8px; }
+.site-spacer { flex: 1; }
+.site-nav .toggle { float: none; margin-left: 6px; }
+.site-menu-btn {
+  display: none; font: inherit; color: var(--text-primary); background: var(--plane);
+  border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; cursor: pointer; white-space: nowrap;
+}
+.site-menu {
+  position: fixed; top: calc(var(--nav-h) + 6px); left: 12px; right: 12px; z-index: 71;
+  max-height: calc(100vh - var(--nav-h) - 24px); overflow: auto;
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.2); padding: 8px;
+  font: 14px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.site-menu[hidden] { display: none; }
+.site-menu a { display: block; padding: 10px 12px; color: var(--text-primary); text-decoration: none; border-radius: 6px; }
+.site-menu a[aria-current="page"], .site-menu a.is-current { background: var(--plane); box-shadow: inset 2px 0 0 var(--series-1); }
+.site-menu-grp { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); padding: 10px 12px 4px; }
+.site-toc { display: none; }
+.heading-anchor { margin-left: 8px; color: var(--text-muted); text-decoration: none; font-weight: 400; opacity: 0; }
+h2:hover .heading-anchor, .heading-anchor:focus-visible { opacity: 1; }
+.heading-anchor:hover { color: var(--series-1); }
+.to-top {
+  position: fixed; right: 20px; bottom: 20px; z-index: 65; width: 40px; height: 40px; border-radius: 20px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: var(--surface-1); border: 1px solid var(--border); color: var(--text-secondary); font-size: 18px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.15);
+}
+.to-top[hidden] { display: none; }
+.to-top:hover { color: var(--text-primary); }
+@media (min-width: 1280px) {
+  body[data-toc] { --toc-gutter: max(260px, calc((100vw - 1180px) / 2)); }
+  body[data-toc] .wrap { margin-left: var(--toc-gutter); margin-right: auto; max-width: min(1180px, calc(100vw - 260px - 24px)); }
+  body[data-toc] .site-toc {
+    display: block; position: fixed; top: calc(var(--nav-h) + 24px); left: calc(var(--toc-gutter) - 236px); width: 212px;
+    max-height: calc(100vh - var(--nav-h) - 48px); overflow: auto;
+    font: 13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .site-toc p { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin: 0 0 8px 12px; }
+  .site-toc a { display: block; padding: 6px 12px; color: var(--text-secondary); text-decoration: none; border-left: 2px solid var(--border); }
+  .site-toc a:hover { color: var(--text-primary); }
+  .site-toc a.is-current { color: var(--text-primary); border-left-color: var(--series-1); font-weight: 600; }
+}
+@media (max-width: 760px) {
+  .site-brand, .site-pages, .site-sep, .site-ext { display: none; }
+  .site-menu-btn { display: inline-block; }
+}
+
 @media (max-width: 760px) {
   .pair, .setup-code { grid-template-columns: 1fr; }
   .wrap { padding: 20px 16px 72px; }
 }
 </style>
 </head>
-<body>
-<div class="wrap">
+<body data-toc>
+<a class="skip-link" href="#main">Skip to content</a>
+<nav class="site-nav" aria-label="Site">
+  <span class="site-brand">Locator benchmark</span>
+  <span class="site-pages"><a href="index.html">Results</a><a href="accessibility.html">Accessibility</a><a href="patterns.html" aria-current="page">Patterns</a></span>
+  <span class="site-sep" aria-hidden="true"></span><a class="site-ext" href="playwright-report/index.html" title="Playwright run report: every test, timing and failure">Run report <span aria-hidden="true">↗</span></a><a class="site-ext" href="https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/docs/LOCATOR-REFERENCE.md" title="Locator reference: what every strategy actually executes" target="_blank" rel="noopener">Reference <span aria-hidden="true">↗</span></a>
+  <span class="site-spacer"></span>
+  <button class="site-menu-btn" type="button" aria-expanded="false" aria-controls="siteMenu">Patterns <span class="site-menu-sections">· Sections</span> <span aria-hidden="true">▾</span></button>
   <button class="toggle" id="themeToggle" type="button">Theme</button>
+</nav>
+<div class="site-menu" id="siteMenu" hidden>
+  <div class="site-menu-grp">Pages</div>
+  <a href="index.html">Results</a>
+  <a href="accessibility.html">Accessibility</a>
+  <a href="patterns.html" aria-current="page">Patterns</a>
+  <div class="site-menu-grp site-menu-toc-head" hidden>On this page</div>
+  <div class="site-menu-toc"></div>
+  <div class="site-menu-grp">Elsewhere</div>
+  <a href="playwright-report/index.html">Run report ↗</a>
+  <a href="https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/docs/LOCATOR-REFERENCE.md" target="_blank" rel="noopener">Reference ↗</a>
+</div>
+<button class="to-top" type="button" aria-label="Back to top" hidden>↑</button>
+<main class="wrap" id="main" tabindex="-1">
   <header>
     <h1>Locator composition patterns</h1>
     <p class="sub">
       What happens when locators meet fixtures, page objects, chaining and assertions. Every pair is the code
       from one scenario in this repository, and every chip opens what that code did when it ran.
     </p>
-    <p class="sub" id="headerLinks"></p>
+    <p class="sub"><a class="ref-link" href="https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts" target="_blank" rel="noopener">The scenario that produced all of this &rarr;</a></p>
   </header>
-
-  <p class="jump">
-    <a href="#family-fixture">Fixtures and page objects</a> &nbsp;·&nbsp; <a href="#family-scope">Scoping and chaining</a> &nbsp;·&nbsp; <a href="#family-strict">Strict mode and ambiguity</a> &nbsp;·&nbsp; <a href="#family-wait">Waiting and assertions</a>
-  </p>
 
   <section class="setup">
     <h2>What the examples are written against</h2>
@@ -657,15 +737,21 @@ await expect(page.getByTestId('late.slot').getByRole('button', { name: 'Submit' 
   </section>
 
   <p class="fingerprint" id="fingerprint"></p>
-</div>
+</main>
 <div id="pop" role="dialog" aria-modal="false" aria-label="What the measurement showed"></div>
 <script id="proofs" type="application/json">{"fixture.handle":{"title":"Hand out locators, not element handles","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"Measured on a list that replaces its nodes on every tick.","lines":[["What the wrong form did","element handle detached after one re-render; click failed with \"elementHandle.click: Element is not attached to the DOM\""],["What the right form did","locator re-resolved and clicked the current element"]],"facts":[["stillAttached","false"],["domNodes","103"],["clicked","churn-12"]]},"fixture.state":{"title":"Do not await DOM state in a constructor","kind":"correctness","url":"/late?lateMode=append&delay=800&rows=200","note":"The control arrives 800 ms after the app reports its first render.","lines":[["What the wrong form did","count() in the constructor returned 0"],["What the right form did","the same locator, asserted rather than counted, resolved to 1"]],"facts":[["delayMs","800"],["constructorCount","0"],["laterCount","1"]]},"fixture.lazy":{"title":"Build locators before the page exists","kind":"correctness","url":"/late?lateMode=append&delay=0&rows=200","note":"Both forms attempted before navigation, then used after it.","lines":[["What the wrong form did","page.$() before navigation returned null, and would have to be re-resolved after every navigation"],["What the right form did","the locator built before navigation resolved to 1 element afterwards"]],"facts":[["resolved","1"]]},"fixture.binding":{"title":"A locator belongs to one page","kind":"correctness","url":"/grid?rows=5&cols=6&seed=bm-v1","note":"Two pages open at once, with different row counts, in the same context.","lines":[["What the wrong form did","the captured locator kept reporting 5 rows, its own page's count, after a second page opened"],["What the right form did","a locator built from the second page reported 40"]],"facts":[["firstPageRows","5"],["secondPageRows","40"],["seenFromFirst","5"],["seenFromSecond","40"]]},"scope.role":{"title":"Scope the expensive query, keep the assertion","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Same element, same accessible name, one paired measurement each.","lines":[["The recommended form","38.3 ms"],["What it replaces","208.2 ms"],["Difference","5.4× "],["Page size","30,034 elements"]],"facts":[["role","button"],["name","Status for row 750"]]},"scope.chain":{"title":"Chain from something unique","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Identical chains, differing only in whether the first step matches one element or every row.","lines":[["The recommended form","35.4 ms"],["What it replaces","2.01 s"],["Difference","56.6× "],["Page size","30,034 elements"]],"facts":[["chainSteps","3"],["broadFirstStep","1500"]]},"scope.filter":{"title":"Filter a narrow set, or address the element instead","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Filtering every row against addressing the row directly.","lines":[["The recommended form","9.1 ms"],["What it replaces","178.2 ms"],["Difference","19.6× "],["Page size","30,034 elements"]],"facts":[["candidateRows","1500"]]},"strict.first":{"title":"Never silence a strict-mode violation with .first()","kind":"correctness","url":"/ambiguous?dup=60&dupIds=4&target=30","note":"Four elements deliberately reuse the target id, rendered ahead of it.","lines":[["What the wrong form did",".first() resolved to a decoy (data-clash=\"0\") while reporting success"],["What the right form did","the scoped locator resolved to data-testid=\"action.30\""]],"facts":[["idMatches","5"],["strictError","locator.click: Error: strict mode violation: locator('#action-r30') resolved to 5 elements:"]]},"strict.nth":{"title":"nth() indexes the template, not the data","kind":"correctness","url":"/grid?rows=40&cols=6&seed=bm-v1&mutate=reorder","note":"The same two locators before and after the column order is reversed.","lines":[["What the wrong form did","nth(2) resolved to column 2 before the reorder and column 3 after it"],["What the right form did","the identity locator resolved to column 2 both times"]],"facts":[["mutation","reorder"],["positionBefore","2"],["positionAfter","3"]]},"wait.count":{"title":"count() asks, toHaveCount() waits","kind":"correctness","url":"/late?lateMode=append&delay=800&rows=200","note":"The control appears 800 ms after the page reports itself rendered.","lines":[["What the wrong form did","count() returned 0 while the control was still 800ms away"],["What the right form did","toHaveCount(1) retried for 798ms and passed"]],"facts":[["delayMs","800"],["countNow","0"],["waitedMs","798"]]},"wait.all":{"title":"all() freezes a list that has not stopped moving","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"A list that re-keys every tick, read twice through the same array.","lines":[["What the wrong form did","items[3] read \"v3.1\" and then \"v3.2\" without anything re-reading the list"],["What the right form did","an identity locator kept pointing at data-row=\"3\" across the same re-render"]],"facts":[["items","40"],["thirdValueThen","v3.1"],["thirdValueNow","v3.2"]]},"wait.snapshot":{"title":"An awaited value is not an assertion","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"Both reads taken across one re-render of the same element.","lines":[["What the wrong form did","the captured string still reads \"v7.0\" after the element changed to \"v7.1\""],["What the right form did","the assertion re-read the element and matched its current value"]],"facts":[["captured","v7.0"],["current","v7.1"]]},"wait.sleep":{"title":"A fixed sleep pays the worst case every time","kind":"cost","url":"/late?lateMode=append&delay=800&rows=200","note":"Wall clock for each form, against a control that appears after 800 ms.","lines":[["The recommended form","802.0 ms"],["What it replaces","3.02 s"],["Difference","3.8× "],["Page size","223 elements"]],"facts":[["renderDelayMs","800"],["sleepMs","3000"]]}}</script>
 <script>
 const PROOFS = JSON.parse(document.getElementById('proofs').textContent);
-const META = {"runId":"20260921090556","browserVersion":"141.0.7390.37","generatedAt":"2026-09-21T09:07:57.961Z","proved":13,"total":13,"costProofs":4,"specUrl":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/a11y/e2e/patterns/s14-composition.spec.ts","dashboard":"index.html","accessibility":"accessibility.html"};
+const META = {"runId":"20260921090556","browserVersion":"141.0.7390.37","generatedAt":"2026-09-21T09:07:57.961Z","proved":13,"total":13,"costProofs":4};
 
 const pop = document.getElementById('pop');
 let popTrigger = null;
+
+// The sticky bar covers the top of the viewport; a popover placed there is hidden.
+function navHeight() {
+  const bar = document.querySelector('.site-nav');
+  return bar ? bar.getBoundingClientRect().height : 0;
+}
 
 function openPop(trigger, html) {
   if (popTrigger === trigger && pop.dataset.open === 'true') { closePop(); return; }
@@ -683,10 +769,11 @@ function placePop() {
   const t = popTrigger.getBoundingClientRect();
   const r = pop.getBoundingClientRect();
   const margin = 8;
+  const floor = navHeight() + margin;
   let top = t.bottom + 6;
   if (top + r.height > innerHeight - margin) {
     const above = t.top - r.height - 6;
-    top = above >= margin ? above : Math.max(margin, innerHeight - r.height - margin);
+    top = above >= floor ? above : Math.max(floor, innerHeight - r.height - margin);
   }
   let left = t.left;
   if (left + r.width > innerWidth - margin) left = innerWidth - r.width - margin;
@@ -716,7 +803,7 @@ addEventListener('scroll', () => {
     queued = false;
     if (!popTrigger || pop.dataset.open !== 'true') return;
     const t = popTrigger.getBoundingClientRect();
-    if (t.bottom < 0 || t.top > innerHeight) { closePop(); return; }
+    if (t.bottom < navHeight() || t.top > innerHeight) { closePop(); return; }
     placePop();
   });
 }, { passive: true });
@@ -737,6 +824,87 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
     document.documentElement.setAttribute('data-theme', next);
     try { localStorage.setItem('bm-theme', next); } catch { /* ignore */ }
   });
+})();
+
+
+(function siteNav() {
+  function init() {
+    const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'section';
+    const heads = [...document.querySelectorAll('.wrap h2')];
+    const used = new Set();
+    const entries = heads.map((h) => {
+      const title = h.textContent.trim();
+      const sec = h.closest('section[id]');
+      let id = h.id || (sec && sec.querySelector('h2') === h ? sec.id : '');
+      if (!id) {
+        id = slug(title);
+        for (let n = 2; used.has(id) || document.getElementById(id); n++) id = slug(title) + '-' + n;
+        h.id = id;
+      }
+      used.add(id);
+      const a = document.createElement('a');
+      a.className = 'heading-anchor';
+      a.href = '#' + id;
+      a.textContent = '#';
+      a.setAttribute('aria-label', 'Link to this section: ' + title);
+      h.append(a);
+      return { id, title, el: h };
+    });
+
+    const links = (cls) => entries.map((e) =>
+      '<a href="#' + esc(e.id) + '" data-for="' + esc(e.id) + '"' + (cls ? ' class="' + cls + '"' : '') + '>' +
+      esc(e.title) + '</a>').join('');
+
+    if (document.body.hasAttribute('data-toc') && entries.length) {
+      const toc = document.createElement('nav');
+      toc.className = 'site-toc';
+      toc.setAttribute('aria-label', 'On this page');
+      toc.innerHTML = '<p>On this page</p>' + links('');
+      document.body.append(toc);
+    }
+
+    const menu = document.getElementById('siteMenu');
+    const btn = document.querySelector('.site-menu-btn');
+    if (menu && btn) {
+      if (entries.length) {
+        menu.querySelector('.site-menu-toc-head').hidden = false;
+        menu.querySelector('.site-menu-toc').innerHTML = links('');
+      } else {
+        btn.querySelector('.site-menu-sections').hidden = true;
+      }
+      const setOpen = (open) => { menu.hidden = !open; btn.setAttribute('aria-expanded', String(open)); };
+      btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(menu.hidden); });
+      menu.addEventListener('click', (e) => { if (e.target.closest('a')) setOpen(false); });
+      document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) setOpen(false); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { setOpen(false); btn.focus(); } });
+      addEventListener('resize', () => setOpen(false));
+    }
+
+    const top = document.querySelector('.to-top');
+    if (top) top.addEventListener('click', () => { scrollTo({ top: 0 }); document.getElementById('main')?.focus({ preventScroll: true }); });
+
+    let queued = false;
+    function spy() {
+      queued = false;
+      if (top) top.hidden = scrollY < innerHeight;
+      let cur = entries.length ? entries[0].id : null;
+      for (const e of entries) if (e.el.getBoundingClientRect().top < innerHeight * 0.3) cur = e.id;
+      if (entries.length && innerHeight + scrollY >= document.documentElement.scrollHeight - 4) cur = entries[entries.length - 1].id;
+      document.querySelectorAll('[data-for]').forEach((a) => {
+        const on = a.dataset.for === cur;
+        a.classList.toggle('is-current', on);
+        if (on) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current');
+      });
+    }
+    addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(spy); } }, { passive: true });
+    addEventListener('resize', spy);
+    spy();
+
+    // The ids above did not exist when the browser tried to honour the URL's hash.
+    if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 
 
@@ -764,18 +932,6 @@ document.addEventListener('click', (e) => {
   e.stopPropagation();
   openPop(chip, proofHtml(chip.dataset.proof));
 });
-
-(function headerLinks() {
-  const parts = ['<a class="ref-link" href="' + esc(META.dashboard) + '">&larr; Measured results dashboard</a>'];
-  if (META.accessibility) {
-    parts.push('<a class="ref-link" href="' + esc(META.accessibility) + '">Accessibility and test levels &rarr;</a>');
-  }
-  if (META.specUrl) {
-    parts.push('<a class="ref-link" href="' + esc(META.specUrl) + '" target="_blank" rel="noopener">' +
-               'The scenario that produced all of this &rarr;</a>');
-  }
-  document.getElementById('headerLinks').innerHTML = parts.join(' &nbsp;·&nbsp; ');
-})();
 
 (function fingerprint() {
   const bits = [META.proved + ' of ' + META.total + ' patterns proved on this run'];
