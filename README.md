@@ -9,9 +9,9 @@ failure.
 "Which locator is fastest" is the wrong headline question, and this project is
 built to prove or disprove that rather than assume it.
 
-Selector resolution is cheap relative to a CDP round trip on small DOMs, so a
-naive benchmark concludes that everything is within noise. That conclusion is
-wrong in both directions:
+Selector resolution is cheap relative to a round trip over the Chrome DevTools
+Protocol (CDP) on small DOMs, so a naive benchmark concludes that everything is
+within noise. That conclusion is wrong in both directions:
 
 - It is **too generous** at scale. At 120,000 DOM elements the spread between the
   cheapest and the dearest strategy in this matrix is roughly seven orders of

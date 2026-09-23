@@ -66,8 +66,13 @@ export const GLOSSARY = {
   },
   'round-trip': {
     term: 'round trip',
-    short: 'One request from the test process to the browser and back.',
+    short: 'One CDP request from the test process to the browser and back.',
     detail: 'Every locator call pays one. On this machine it costs more than most queries do, which is why the paired design exists and why the cheapest strategies all measure at the floor rather than at their true cost.',
+  },
+  cdp: {
+    term: 'CDP',
+    short: 'Chrome DevTools Protocol: how Playwright talks to the browser.',
+    detail: 'A message-based protocol over a WebSocket. Your test runs in Node, the page runs in the browser process, and every locator call \u2014 count, click, an assertion\u0027s retry \u2014 is a message across that boundary and an answer back. That transport, not the selector, is most of what a naive timing measures on a small page, which is what the paired design exists to remove. It is also where the mechanism profile comes from: a CDP trace counts what work a query caused rather than how long it took.',
   },
   'at-floor': {
     term: 'at floor',
