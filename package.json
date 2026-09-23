@@ -11,14 +11,23 @@
     "app:build": "npm --prefix app run build -- --configuration production",
     "app:serve": "node tools/static-server.mjs",
     "bench": "playwright test",
-    "bench:micro": "playwright test --project=micro",
-    "bench:macro": "playwright test --project=macro",
+    "bench:micro": "BM_HTML_REPORT=results/.partial-report playwright test --project=micro",
+    "bench:macro": "BM_HTML_REPORT=results/.partial-report playwright test --project=macro",
     "analyze": "node analysis/aggregate.mjs",
     "dashboard": "node analysis/build-dashboard.mjs",
-    "report": "npm run analyze && npm run dashboard && npm run reference",
-    "reference": "node analysis/strategy-reference.mjs"
+    "report": "npm run analyze && npm run accessibility-page && npm run patterns-page && npm run dashboard && npm run reference && npm run matrix-doc && npm run composition-doc",
+    "reference": "node analysis/strategy-reference.mjs",
+    "bench:a11y": "BM_HTML_REPORT=results/.partial-report playwright test --project=a11y",
+    "bench:patterns": "BM_HTML_REPORT=results/.partial-report playwright test --project=patterns",
+    "bench:robustness": "BM_HTML_REPORT=results/.partial-report playwright test --project=robustness",
+    "accessibility-page": "node analysis/build-accessibility-page.mjs",
+    "matrix-doc": "node analysis/a11y-matrix-doc.mjs",
+    "verify:pages": "node tools/verify-pages.mjs",
+    "patterns-page": "node analysis/build-patterns-page.mjs",
+    "composition-doc": "node analysis/composition-doc.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "1.63.0",
     "@types/node": "^22.10.0",
     "typescript": "~5.9.0"

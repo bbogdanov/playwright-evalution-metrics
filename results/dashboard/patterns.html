@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Locator composition patterns</title>
+<style>
+:root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --plane: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --series-5: #e87ba4;
+    --series-6: #008300;
+    --series-7: #4a3aa7;
+    --series-8: #e34948;
+    --seq-0: #cde2fb;
+    --seq-1: #b7d3f6;
+    --seq-2: #9ec5f4;
+    --seq-3: #86b6ef;
+    --seq-4: #6da7ec;
+    --seq-5: #5598e7;
+    --seq-6: #3987e5;
+    --seq-7: #2a78d6;
+    --seq-8: #256abf;
+    --seq-9: #1c5cab;
+    --seq-10: #184f95;
+    --seq-11: #104281;
+    --seq-12: #0d366b;
+  --status-good: #0ca30c;
+  --status-critical: #d03b3b;
+  --do-bg: rgba(12,163,12,0.07);
+  --dont-bg: rgba(208,59,59,0.07);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --plane: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --seq-0: #cde2fb;
+    --seq-1: #b7d3f6;
+    --seq-2: #9ec5f4;
+    --seq-3: #86b6ef;
+    --seq-4: #6da7ec;
+    --seq-5: #5598e7;
+    --seq-6: #3987e5;
+    --seq-7: #2a78d6;
+    --seq-8: #256abf;
+    --seq-9: #1c5cab;
+    --seq-10: #184f95;
+    --seq-11: #104281;
+    --seq-12: #0d366b;
+    --do-bg: rgba(12,163,12,0.12);
+    --dont-bg: rgba(208,59,59,0.12);
+  }
+}
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --plane: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --seq-0: #cde2fb;
+    --seq-1: #b7d3f6;
+    --seq-2: #9ec5f4;
+    --seq-3: #86b6ef;
+    --seq-4: #6da7ec;
+    --seq-5: #5598e7;
+    --seq-6: #3987e5;
+    --seq-7: #2a78d6;
+    --seq-8: #256abf;
+    --seq-9: #1c5cab;
+    --seq-10: #184f95;
+    --seq-11: #104281;
+    --seq-12: #0d366b;
+  --do-bg: rgba(12,163,12,0.12);
+  --dont-bg: rgba(208,59,59,0.12);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--plane);
+  color: var(--text-primary);
+  font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 32px 16px 96px; }
+header h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+.sub { color: var(--text-secondary); margin: 0 0 6px; max-width: 78ch; }
+h2 { font-size: 17px; margin: 40px 0 6px; letter-spacing: -0.005em; }
+.lede { color: var(--text-secondary); margin: 0 0 18px; max-width: 78ch; }
+.jump { margin: 18px 0 26px; font-size: 13px; color: var(--text-muted); }
+.jump a { color: var(--series-1); text-decoration: none; }
+.jump a:hover { text-decoration: underline; }
+
+.pattern {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 0 0 14px;
+}
+.pattern-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.pattern h3 { font-size: 15px; margin: 0; flex: 1 1 auto; }
+.summary { color: var(--text-secondary); margin: 6px 0 12px; max-width: 78ch; }
+.why { color: var(--text-secondary); margin: 12px 0 0; max-width: 82ch; font-size: 13px; }
+
+.chip {
+  font: 500 11.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+  background: var(--plane);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.chip:hover:not([disabled]), .chip:focus-visible { border-color: var(--series-1); color: var(--text-primary); outline: none; }
+.chip[aria-expanded="true"] { border-color: var(--series-1); color: var(--text-primary); }
+.chip[disabled] { cursor: default; opacity: .6; }
+.chip-cost { color: var(--series-1); }
+.chip-correct { color: var(--status-good); }
+.chip::after { content: " ?"; color: var(--text-muted); }
+.chip[disabled]::after { content: ""; }
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.side { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.side header {
+  font: 600 11.5px/1 system-ui, sans-serif;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  display: flex; align-items: center; gap: 7px;
+  border-bottom: 1px solid var(--border);
+}
+.side .mark { font-size: 12px; }
+.side.dont header { background: var(--dont-bg); color: var(--status-critical); }
+.side.do header { background: var(--do-bg); color: var(--status-good); }
+.side pre {
+  margin: 0;
+  padding: 10px 12px;
+  font: 11.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--surface-1);
+  /* Wrapped, not scrolled: a horizontal scrollbar inside one half of a
+     side-by-side comparison hides the difference the comparison exists for. */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.side pre code { color: var(--text-primary); }
+
+.setup-code { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.setup-code pre {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: 11.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.fingerprint {
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-muted);
+  border-left: 2px solid var(--axis);
+  padding-left: 10px;
+  margin: 34px 0 0;
+}
+#pop .pop-rows { margin: 6px 0 0; }
+#pop .pop-row { display: flex; gap: 10px; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--grid); }
+#pop .pop-row:last-child { border-bottom: 0; }
+#pop .pop-row .k { color: var(--text-secondary); }
+#pop .pop-row .v { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; text-align: right; }
+#pop .pop-note { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+
+.term {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0 1px;
+  border-bottom: 1px dotted var(--text-muted);
+  cursor: help;
+}
+.term:hover, .term:focus-visible { border-bottom-style: solid; color: var(--series-1); outline: none; }
+.term[aria-expanded="true"] { border-bottom-style: solid; color: var(--series-1); }
+.term-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95em;
+  border-bottom: 1px dotted var(--text-muted);
+  cursor: help;
+  background: none; border-top: 0; border-left: 0; border-right: 0;
+  color: inherit; padding: 0;
+}
+.term-code:hover, .term-code:focus-visible { color: var(--series-1); border-bottom-style: solid; outline: none; }
+
+#pop {
+  position: fixed;
+  z-index: 60;
+  max-width: 420px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.20);
+  font: 13px/1.55 system-ui, sans-serif;
+  display: none;
+}
+#pop[data-open="true"] { display: block; }
+#pop .pop-term { font-weight: 600; font-size: 13.5px; margin-bottom: 4px; padding-right: 18px; }
+#pop .pop-short { color: var(--text-primary); margin-bottom: 8px; }
+#pop .pop-detail { color: var(--text-secondary); font-size: 12.5px; }
+#pop .pop-call, #pop pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  background: var(--plane);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 6px 8px;
+  margin: 6px 0 8px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+#pop .pop-close {
+  position: absolute; top: 6px; right: 8px;
+  background: none; border: 0; color: var(--text-muted);
+  font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 4px;
+}
+#pop .pop-close:hover { color: var(--text-primary); }
+.ref-link {
+  font-size: 12.5px;
+  color: var(--series-1);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.ref-link:hover { border-bottom-color: currentColor; }
+.toggle {
+  float: right; font-size: 12px; color: var(--text-secondary);
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 10px; cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .pair, .setup-code { grid-template-columns: 1fr; }
+  .wrap { padding: 20px 16px 72px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <button class="toggle" id="themeToggle" type="button">Theme</button>
+  <header>
+    <h1>Locator composition patterns</h1>
+    <p class="sub">
+      What happens when locators meet fixtures, page objects, chaining and assertions. Every pair is the code
+      from one scenario in this repository, and every chip opens what that code did when it ran.
+    </p>
+    <p class="sub" id="headerLinks"></p>
+  </header>
+
+  <p class="jump">
+    <a href="#family-fixture">Fixtures and page objects</a> &nbsp;·&nbsp; <a href="#family-scope">Scoping and chaining</a> &nbsp;·&nbsp; <a href="#family-strict">Strict mode and ambiguity</a> &nbsp;·&nbsp; <a href="#family-wait">Waiting and assertions</a>
+  </p>
+
+  <section class="setup">
+    <h2>What the examples are written against</h2>
+    <p class="lede">
+      Every pair below comes from one scenario file, so the examples share its fixture, its page object and a
+      handful of constants. This is that shared context, extracted from the same file: <code>grid</code> is the
+      fixture, and the page object hands out locators rather than elements - which is itself the first pattern.
+    </p>
+    <div class="setup-code">
+      <pre><code>/** Production-ish page: ~30,000 elements, matching S1's `m` tier. */
+const BIG = { rows: 1_500, cols: 6, seed: 'bm-v1' } as const;
+const BIG_ROW = 750;
+const BIG_COL = 2;
+/** Column 2's accessible name on that row, stamped by the target directive. */
+const BIG_NAME = `Status for row ${BIG_ROW}`;</code></pre>
+      <pre><code>class GridPage {
+  constructor(private readonly page: Page) {}
+
+  /** A uniquely addressable container. Everything else is scoped through it. */
+  row(r: number): Locator {
+    return this.page.getByTestId(`row.${r}`);
+  }
+
+  /** Deliberately takes a root: the caller decides what this is scoped to. */
+  cellByName(root: Locator, name: string): Locator {
+    return root.getByRole('button', { name, exact: true });
+  }
+}
+
+/**
+ * A fixture that hands the test a page object rather than a resolved element.
+ *
+ * The fixture never awaits anything about the DOM, so it cannot bake in a state
+ * that has already changed by the time the test body runs.
+ */
+const test = base.extend&lt;{ grid: GridPage }&gt;({
+  grid: async ({ page }, use) =&gt; {
+    await use(new GridPage(page));
+  },
+});</code></pre>
+    </div>
+  </section>
+
+  <section class="family" id="family-fixture">
+    <h2>Fixtures and page objects</h2>
+    <p class="lede">A locator is a description of how to find something, not something found. Almost every fixture mistake is a variation on forgetting that: resolving too early, storing the result, or storing it somewhere that outlives the page it came from.</p>
+      <article class="pattern" id="fixture.handle">
+        <div class="pattern-head">
+          <h3>Hand out locators, not element handles</h3>
+          <button class="chip chip-correct" type="button" data-proof="fixture.handle" aria-expanded="false"
+                  >proved: the wrong form gets the wrong answer</button>
+        </div>
+        <p class="summary">A fixture that resolves the element hands the test a pointer to a node that may no longer exist.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// A fixture that resolves the element and hands back the handle.
+const handle = await page.getByTestId('churn.12').elementHandle();</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// A fixture that hands back the locator instead.
+const target = page.getByTestId('churn.12');</code></pre>
+          </div>
+        </div>
+        <p class="why">An ElementHandle points at one specific DOM node. A locator points at a query. When the framework re-renders - a signal updates, a list re-keys, a route reloads - the node the handle holds is detached, and every action on it fails against a DOM nobody is looking at any more. The locator runs its query again and finds the element that exists now. This is also why a fixture can safely build locators before the test does anything at all.</p>
+      </article>
+      <article class="pattern" id="fixture.state">
+        <div class="pattern-head">
+          <h3>Do not await DOM state in a constructor</h3>
+          <button class="chip chip-correct" type="button" data-proof="fixture.state" aria-expanded="false"
+                  >proved: the wrong form gets the wrong answer</button>
+        </div>
+        <p class="summary">A page object that counts, reads text or checks visibility while being built captures a moment that has already passed.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// A page object that resolves state while it is being constructed.
+const submitCount = await page.getByTestId('late.slot').getByRole('button').count();</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// A page object that exposes the locator and lets the assertion do the waiting.
+const submit = page.getByTestId('late.slot').getByRole('button', { name: 'Submit' });
+await expect(submit).toHaveCount(1);</code></pre>
+          </div>
+        </div>
+        <p class="why">Fixtures run before the test body, which is usually before the application has settled. A count taken there is not wrong later - it was wrong when it was taken. Expose the locator and let the assertion do the waiting; the page object stays cheap to construct and correct at every point in the test.</p>
+      </article>
+      <article class="pattern" id="fixture.lazy">
+        <div class="pattern-head">
+          <h3>Build locators before the page exists</h3>
+          <button class="chip chip-correct" type="button" data-proof="fixture.lazy" aria-expanded="false"
+                  >proved: the wrong form gets the wrong answer</button>
+        </div>
+        <p class="summary">Locators can be constructed against a blank page, in a fixture, at module scope - they resolve when used.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// The same intent, resolved eagerly: there is nothing to find yet.
+const handleBefore = await page.$('button');</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// Built against a blank page: a locator is a description, not a lookup.
+const submit = page.getByRole('button', { name: 'Submit' });</code></pre>
+          </div>
+        </div>
+        <p class="why">This is the property that makes page objects work. Because nothing is resolved until an action or an assertion runs, a page object can be constructed once and used across navigations without rebuilding anything. The eager equivalent cannot exist yet, and has to be re-resolved after every navigation - which is the bug in every &quot;element not attached&quot; stack trace.</p>
+      </article>
+      <article class="pattern" id="fixture.binding">
+        <div class="pattern-head">
+          <h3>A locator belongs to one page</h3>
+          <button class="chip chip-correct" type="button" data-proof="fixture.binding" aria-expanded="false"
+                  >proved: the wrong form gets the wrong answer</button>
+        </div>
+        <p class="summary">Locators carry their frame. One captured from the first page keeps querying the first page.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// A locator captured from one page, then used after opening another.
+const rowsOnFirstPage = page.locator('tr.bm-grid__row');
+const second = await context.newPage();
+await second.goto('/grid?rows=40&amp;cols=6&amp;seed=bm-v1', { waitUntil: 'commit' });
+await second.waitForSelector('html[data-bm-ready]');
+const seenFromFirst = await rowsOnFirstPage.count();</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// Each page gets its own locators, built from that page.
+const rowsOnSecondPage = second.locator('tr.bm-grid__row');
+const seenFromSecond = await rowsOnSecondPage.count();</code></pre>
+          </div>
+        </div>
+        <p class="why">A locator is bound to the frame that created it, so passing one between fixtures, storing one at module scope, or keeping one across a popup or a new tab silently queries the wrong document. There is no error - the query runs, against the page you were not looking at. Build locators from the page object you were handed, and give a second page its own.</p>
+      </article>
+  </section>
+  <section class="family" id="family-scope">
+    <h2>Scoping and chaining</h2>
+    <p class="lede">Chaining is not the problem. Chaining from a root that matches thousands of elements is, because every step re-resolves against every match of the step before it. Give the first step one match and the multiplication disappears.</p>
+      <article class="pattern" id="scope.role">
+        <div class="pattern-head">
+          <h3>Scope the expensive query, keep the assertion</h3>
+          <button class="chip chip-cost" type="button" data-proof="scope.role" aria-expanded="false"
+                  >208.2 ms → 38.3 ms, 5.4× faster</button>
+        </div>
+        <p class="summary">Find the container by identity; find the control inside it by role and name.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// Every element of that role in the document is a candidate.
+const unscoped = page.getByRole('button', { name: BIG_NAME, exact: true });</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// The container is found by test id; the accessible name is asserted inside it.
+const scoped = grid.cellByName(grid.row(BIG_ROW), BIG_NAME);</code></pre>
+          </div>
+        </div>
+        <p class="why">An unscoped role query computes an accessible name for every element of that role in the document. Scoped to a container it computes one per candidate inside that container. The test still asserts that the control is reachable by its accessible name - which is the thing worth asserting - and stops paying for the rest of the page to be examined.</p>
+      </article>
+      <article class="pattern" id="scope.chain">
+        <div class="pattern-head">
+          <h3>Chain from something unique</h3>
+          <button class="chip chip-cost" type="button" data-proof="scope.chain" aria-expanded="false"
+                  >2.01 s → 35.4 ms, 56.6× faster</button>
+        </div>
+        <p class="summary">The cost of a chain is the product of the match counts along it.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// Each step re-resolves against every match of the step before it.
+const fromBroadRoot = page
+  .locator('tr.bm-grid__row')
+  .locator('td.bm-grid__cellwrap')
+  .locator('button.bm-grid__cell')
+  .nth(index);</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// Identical chaining, but the first step matches exactly one element.
+const fromUniqueRoot = grid.row(BIG_ROW)
+  .locator('td.bm-grid__cellwrap')
+  .locator('button.bm-grid__cell')
+  .nth(BIG_COL);</code></pre>
+          </div>
+        </div>
+        <p class="why">Each chained step runs its selector against every element the previous step matched. Three broad steps over a large table is thousands of subqueries; the same three steps from a container that matches exactly one element is three. The fix is never &quot;stop chaining&quot; - it is to make the first step unique.</p>
+      </article>
+      <article class="pattern" id="scope.filter">
+        <div class="pattern-head">
+          <h3>Filter a narrow set, or address the element instead</h3>
+          <button class="chip chip-cost" type="button" data-proof="scope.filter" aria-expanded="false"
+                  >178.2 ms → 9.1 ms, 19.6× faster</button>
+        </div>
+        <p class="summary">filter({ hasText }) runs a text scan per candidate, so the cost follows the candidate count.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// Every row is a candidate, and each candidate pays a text scan.
+const filtered = page
+  .getByRole('row')
+  .filter({ hasText: `Row ${BIG_ROW} ` })
+  .getByRole('button', { name: BIG_NAME, exact: true });</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// The row is addressed directly; there is nothing left to filter.
+const addressed = grid.cellByName(grid.row(BIG_ROW), BIG_NAME);</code></pre>
+          </div>
+        </div>
+        <p class="why">Filtering is the right tool when the thing you want can only be described by its content, and the candidate set is already small. Reaching for it against every row of a table means scanning the text of every row to find the one whose identity you already knew. If the container has a test id, use it.</p>
+      </article>
+  </section>
+  <section class="family" id="family-strict">
+    <h2>Strict mode and ambiguity</h2>
+    <p class="lede">Strict mode fails a test when a locator matches more than one element. That failure is the feature. Both ways of silencing it - taking the first match, or indexing into the list - replace a loud failure with a test that passes against the wrong element.</p>
+      <article class="pattern" id="strict.first">
+        <div class="pattern-head">
+          <h3>Never silence a strict-mode violation with .first()</h3>
+          <button class="chip chip-correct" type="button" data-proof="strict.first" aria-expanded="false"
+                  >proved: the wrong form gets the wrong answer</button>
+        </div>
+        <p class="summary">.first() takes whatever is first in document order, which is rarely the element you meant.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// The strict-mode violation is real; .first() hides it and takes whatever is
+// first in document order.
+const first = page.locator(`#${canonicalId}`).first();
+const clash = await first.getAttribute('data-clash');</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// Scope to something that is genuinely unique, and let strict mode stand.
+const scoped = page.getByTestId('card.30').getByRole('button', { name: 'Open 30', exact: true });
+const testId = await scoped.getAttribute('data-testid');</code></pre>
+          </div>
+        </div>
+        <p class="why">A strict-mode violation says the locator does not identify one element. .first() does not fix that; it picks one and carries on, and the test passes against whatever happens to render earliest. When something is later inserted above your target - a banner, a duplicate id, a second instance of the component - the test keeps passing and stops testing what it claims to. Narrow the root instead.</p>
+      </article>
+      <article class="pattern" id="strict.nth">
+        <div class="pattern-head">
+          <h3>nth() indexes the template, not the data</h3>
+          <button class="chip chip-correct" type="button" data-proof="strict.nth" aria-expanded="false"
+                  >proved: the wrong form gets the wrong answer</button>
+        </div>
+        <p class="summary">Position is owned by whoever edits the markup, which is not whoever wrote the test.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// Position within the row, which the template owns.
+const byPosition = grid.row(10).getByRole('button').nth(BIG_COL);</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// Identity within the row, which the data owns.
+const byIdentity = grid.row(10).getByTestId(`cell.10.${BIG_COL}`);</code></pre>
+          </div>
+        </div>
+        <p class="why">Indexing into a list of matches ties the test to DOM order. Reordering columns, adding a button, or rendering an extra element conditionally changes what the index refers to, and nothing fails - the test asserts confidently against a different element. Where a stable identity exists, address it; nth() is defensible only in a tree you fully control, such as a component test.</p>
+      </article>
+  </section>
+  <section class="family" id="family-wait">
+    <h2>Waiting and assertions</h2>
+    <p class="lede">Anything you await into a variable is a snapshot with no retry. Anything you pass to expect() is re-read until it agrees or the timeout expires. Most flaky tests are a snapshot being asserted against a page that had not finished moving.</p>
+      <article class="pattern" id="wait.count">
+        <div class="pattern-head">
+          <h3>count() asks, toHaveCount() waits</h3>
+          <button class="chip chip-correct" type="button" data-proof="wait.count" aria-expanded="false"
+                  >proved: the wrong form gets the wrong answer</button>
+        </div>
+        <p class="summary">Locator queries return what is true right now. Web-first assertions retry until the timeout.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// A snapshot of right now. No retry, so the assertion runs against whatever
+// the page happened to be mid-render.
+const countNow = await submit.count();</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// Retries until the page agrees or the timeout expires.
+await expect(submit).toHaveCount(1);</code></pre>
+          </div>
+        </div>
+        <p class="why">await locator.count() resolves immediately against a page that may still be rendering, and the number it returns is then asserted with no retry. expect(locator).toHaveCount(n) re-runs the query until it matches or gives up. The difference is the difference between a flaky suite and a slow one, and only one of those is worth having.</p>
+      </article>
+      <article class="pattern" id="wait.all">
+        <div class="pattern-head">
+          <h3>all() freezes a list that has not stopped moving</h3>
+          <button class="chip chip-correct" type="button" data-proof="wait.all" aria-expanded="false"
+                  >proved: the wrong form gets the wrong answer</button>
+        </div>
+        <p class="summary">It returns positional locators captured at one moment, and positions change.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// A frozen array of positional locators. Each one means &quot;the nth match as of
+// whenever you next use it&quot;, which is not the element you looked at.
+const items = await page.getByTestId('churn.list').locator('.bm-churn__cell').all();
+const thirdValueThen = await items[3].textContent();</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// Address the item, not its position, and assert on the locator.
+const item = page.getByTestId('churn.3');
+await expect(item).toHaveAttribute('data-row', '3');</code></pre>
+          </div>
+        </div>
+        <p class="why">locator.all() resolves the matches once and hands back an array of nth-indexed locators. If the list re-renders, re-sorts or grows, entry 3 still means &quot;the fourth match whenever you next use it&quot; - which may now be a different item. Assert the count first if you must iterate, and address items by identity inside the loop rather than by where they were.</p>
+      </article>
+      <article class="pattern" id="wait.snapshot">
+        <div class="pattern-head">
+          <h3>An awaited value is not an assertion</h3>
+          <button class="chip chip-correct" type="button" data-proof="wait.snapshot" aria-expanded="false"
+                  >proved: the wrong form gets the wrong answer</button>
+        </div>
+        <p class="summary">textContent(), inputValue() and getAttribute() return strings, and strings do not retry.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// A string. Whatever it says, it says forever.
+const text = await cell.textContent();</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// The locator, asserted. Re-reads the element until it agrees or times out.
+await expect(cell).toHaveText(textNow ?? '');</code></pre>
+          </div>
+        </div>
+        <p class="why">Capturing a value and asserting on the variable moves the assertion off the page and into your process. Whatever the string said when it was read, it says forever - so a test can pass against a value the interface stopped showing seconds ago, or fail because the read landed one frame early. Pass the locator to expect() and let it re-read.</p>
+      </article>
+      <article class="pattern" id="wait.sleep">
+        <div class="pattern-head">
+          <h3>A fixed sleep pays the worst case every time</h3>
+          <button class="chip chip-cost" type="button" data-proof="wait.sleep" aria-expanded="false"
+                  >3.02 s → 802.0 ms, 3.8× faster</button>
+        </div>
+        <p class="summary">waitForTimeout costs the same on a fast machine and is still too short on a slow one.</p>
+        <div class="pair">
+          <div class="side dont">
+            <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
+            <pre><code>// Costs the same whether the page took 10ms or 2 seconds, and still fails when
+// the machine is slower than whoever picked the number.
+await page.waitForTimeout(sleepMs);
+await expect(submit).toHaveCount(1);</code></pre>
+          </div>
+          <div class="side do">
+            <header><span class="mark" aria-hidden="true">✓</span>Do</header>
+            <pre><code>// Returns as soon as the page is ready, and waits longer when it has to.
+await expect(page.getByTestId('late.slot').getByRole('button', { name: 'Submit' })).toHaveCount(1);</code></pre>
+          </div>
+        </div>
+        <p class="why">A sleep encodes a guess about someone else's hardware. It is pure cost when the page was ready immediately, and it fails anyway when CI is loaded. A web-first assertion returns as soon as the condition holds and waits longer when it has to - faster in the common case and more reliable in the bad one. There is no trade-off here to weigh.</p>
+      </article>
+  </section>
+
+  <p class="fingerprint" id="fingerprint"></p>
+</div>
+<div id="pop" role="dialog" aria-modal="false" aria-label="What the measurement showed"></div>
+<script id="proofs" type="application/json">{"fixture.handle":{"title":"Hand out locators, not element handles","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"Measured on a list that replaces its nodes on every tick.","lines":[["What the wrong form did","element handle detached after one re-render; click failed with \"elementHandle.click: Element is not attached to the DOM\""],["What the right form did","locator re-resolved and clicked the current element"]],"facts":[["stillAttached","false"],["domNodes","103"],["clicked","churn-12"]]},"fixture.state":{"title":"Do not await DOM state in a constructor","kind":"correctness","url":"/late?lateMode=append&delay=800&rows=200","note":"The control arrives 800 ms after the app reports its first render.","lines":[["What the wrong form did","count() in the constructor returned 0"],["What the right form did","the same locator, asserted rather than counted, resolved to 1"]],"facts":[["delayMs","800"],["constructorCount","0"],["laterCount","1"]]},"fixture.lazy":{"title":"Build locators before the page exists","kind":"correctness","url":"/late?lateMode=append&delay=0&rows=200","note":"Both forms attempted before navigation, then used after it.","lines":[["What the wrong form did","page.$() before navigation returned null, and would have to be re-resolved after every navigation"],["What the right form did","the locator built before navigation resolved to 1 element afterwards"]],"facts":[["resolved","1"]]},"fixture.binding":{"title":"A locator belongs to one page","kind":"correctness","url":"/grid?rows=5&cols=6&seed=bm-v1","note":"Two pages open at once, with different row counts, in the same context.","lines":[["What the wrong form did","the captured locator kept reporting 5 rows, its own page's count, after a second page opened"],["What the right form did","a locator built from the second page reported 40"]],"facts":[["firstPageRows","5"],["secondPageRows","40"],["seenFromFirst","5"],["seenFromSecond","40"]]},"scope.role":{"title":"Scope the expensive query, keep the assertion","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Same element, same accessible name, one paired measurement each.","lines":[["The recommended form","38.3 ms"],["What it replaces","208.2 ms"],["Difference","5.4× "],["Page size","30,034 elements"]],"facts":[["role","button"],["name","Status for row 750"]]},"scope.chain":{"title":"Chain from something unique","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Identical chains, differing only in whether the first step matches one element or every row.","lines":[["The recommended form","35.4 ms"],["What it replaces","2.01 s"],["Difference","56.6× "],["Page size","30,034 elements"]],"facts":[["chainSteps","3"],["broadFirstStep","1500"]]},"scope.filter":{"title":"Filter a narrow set, or address the element instead","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Filtering every row against addressing the row directly.","lines":[["The recommended form","9.1 ms"],["What it replaces","178.2 ms"],["Difference","19.6× "],["Page size","30,034 elements"]],"facts":[["candidateRows","1500"]]},"strict.first":{"title":"Never silence a strict-mode violation with .first()","kind":"correctness","url":"/ambiguous?dup=60&dupIds=4&target=30","note":"Four elements deliberately reuse the target id, rendered ahead of it.","lines":[["What the wrong form did",".first() resolved to a decoy (data-clash=\"0\") while reporting success"],["What the right form did","the scoped locator resolved to data-testid=\"action.30\""]],"facts":[["idMatches","5"],["strictError","locator.click: Error: strict mode violation: locator('#action-r30') resolved to 5 elements:"]]},"strict.nth":{"title":"nth() indexes the template, not the data","kind":"correctness","url":"/grid?rows=40&cols=6&seed=bm-v1&mutate=reorder","note":"The same two locators before and after the column order is reversed.","lines":[["What the wrong form did","nth(2) resolved to column 2 before the reorder and column 3 after it"],["What the right form did","the identity locator resolved to column 2 both times"]],"facts":[["mutation","reorder"],["positionBefore","2"],["positionAfter","3"]]},"wait.count":{"title":"count() asks, toHaveCount() waits","kind":"correctness","url":"/late?lateMode=append&delay=800&rows=200","note":"The control appears 800 ms after the page reports itself rendered.","lines":[["What the wrong form did","count() returned 0 while the control was still 800ms away"],["What the right form did","toHaveCount(1) retried for 798ms and passed"]],"facts":[["delayMs","800"],["countNow","0"],["waitedMs","798"]]},"wait.all":{"title":"all() freezes a list that has not stopped moving","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"A list that re-keys every tick, read twice through the same array.","lines":[["What the wrong form did","items[3] read \"v3.1\" and then \"v3.2\" without anything re-reading the list"],["What the right form did","an identity locator kept pointing at data-row=\"3\" across the same re-render"]],"facts":[["items","40"],["thirdValueThen","v3.1"],["thirdValueNow","v3.2"]]},"wait.snapshot":{"title":"An awaited value is not an assertion","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"Both reads taken across one re-render of the same element.","lines":[["What the wrong form did","the captured string still reads \"v7.0\" after the element changed to \"v7.1\""],["What the right form did","the assertion re-read the element and matched its current value"]],"facts":[["captured","v7.0"],["current","v7.1"]]},"wait.sleep":{"title":"A fixed sleep pays the worst case every time","kind":"cost","url":"/late?lateMode=append&delay=800&rows=200","note":"Wall clock for each form, against a control that appears after 800 ms.","lines":[["The recommended form","802.0 ms"],["What it replaces","3.02 s"],["Difference","3.8× "],["Page size","223 elements"]],"facts":[["renderDelayMs","800"],["sleepMs","3000"]]}}</script>
+<script>
+const PROOFS = JSON.parse(document.getElementById('proofs').textContent);
+const META = {"runId":"20260921090556","browserVersion":"141.0.7390.37","generatedAt":"2026-09-21T09:07:57.961Z","proved":13,"total":13,"costProofs":4,"specUrl":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/a11y/e2e/patterns/s14-composition.spec.ts","dashboard":"index.html","accessibility":"accessibility.html"};
+
+const pop = document.getElementById('pop');
+let popTrigger = null;
+
+function openPop(trigger, html) {
+  if (popTrigger === trigger && pop.dataset.open === 'true') { closePop(); return; }
+  closePop();
+  popTrigger = trigger;
+  pop.innerHTML = '<button class="pop-close" type="button" aria-label="Close">×</button>' + html;
+  pop.dataset.open = 'true';
+  trigger.setAttribute('aria-expanded', 'true');
+  placePop();
+  pop.querySelector('.pop-close').addEventListener('click', closePop);
+}
+
+function placePop() {
+  if (!popTrigger) return;
+  const t = popTrigger.getBoundingClientRect();
+  const r = pop.getBoundingClientRect();
+  const margin = 8;
+  let top = t.bottom + 6;
+  if (top + r.height > innerHeight - margin) {
+    const above = t.top - r.height - 6;
+    top = above >= margin ? above : Math.max(margin, innerHeight - r.height - margin);
+  }
+  let left = t.left;
+  if (left + r.width > innerWidth - margin) left = innerWidth - r.width - margin;
+  pop.style.left = Math.max(margin, left) + 'px';
+  pop.style.top = top + 'px';
+}
+
+function closePop() {
+  pop.dataset.open = 'false';
+  if (popTrigger) popTrigger.setAttribute('aria-expanded', 'false');
+  popTrigger = null;
+}
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePop(); });
+document.addEventListener('click', (e) => {
+  if (pop.dataset.open !== 'true') return;
+  if (pop.contains(e.target) || (popTrigger && popTrigger.contains(e.target))) return;
+  closePop();
+});
+
+// One reposition per frame: scroll fires far more often than the layout changes.
+let queued = false;
+addEventListener('scroll', () => {
+  if (pop.dataset.open !== 'true' || queued) return;
+  queued = true;
+  requestAnimationFrame(() => {
+    queued = false;
+    if (!popTrigger || pop.dataset.open !== 'true') return;
+    const t = popTrigger.getBoundingClientRect();
+    if (t.bottom < 0 || t.top > innerHeight) { closePop(); return; }
+    placePop();
+  });
+}, { passive: true });
+addEventListener('resize', closePop);
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+(function theme() {
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  let stored = null;
+  try { stored = localStorage.getItem('bm-theme'); } catch { /* private mode */ }
+  if (stored) document.documentElement.setAttribute('data-theme', stored);
+  btn.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const isDark = cur ? cur === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('bm-theme', next); } catch { /* ignore */ }
+  });
+})();
+
+
+function proofHtml(id) {
+  const p = PROOFS[id];
+  if (!p) return '';
+  const rows = p.lines.map(([k, v]) =>
+    '<div class="pop-row"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>').join('');
+  const facts = p.facts.length
+    ? '<div class="pop-rows">' + p.facts.map(([k, v]) =>
+        '<div class="pop-row"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>').join('') + '</div>'
+    : '';
+  return '<div class="pop-term">' + esc(p.title) + '</div>' +
+    '<div class="pop-short">' + (p.kind === 'cost'
+      ? 'Paired measurement, baseline subtracted, median of the repetitions.'
+      : 'Both forms run against the same page, in the same test.') + '</div>' +
+    '<div class="pop-rows">' + rows + '</div>' +
+    facts +
+    '<div class="pop-note">' + esc(p.note || '') + '<br>' + esc(p.url) + '</div>';
+}
+
+document.addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-proof]');
+  if (!chip || chip.disabled) return;
+  e.stopPropagation();
+  openPop(chip, proofHtml(chip.dataset.proof));
+});
+
+(function headerLinks() {
+  const parts = ['<a class="ref-link" href="' + esc(META.dashboard) + '">&larr; Measured results dashboard</a>'];
+  if (META.accessibility) {
+    parts.push('<a class="ref-link" href="' + esc(META.accessibility) + '">Accessibility and test levels &rarr;</a>');
+  }
+  if (META.specUrl) {
+    parts.push('<a class="ref-link" href="' + esc(META.specUrl) + '" target="_blank" rel="noopener">' +
+               'The scenario that produced all of this &rarr;</a>');
+  }
+  document.getElementById('headerLinks').innerHTML = parts.join(' &nbsp;·&nbsp; ');
+})();
+
+(function fingerprint() {
+  const bits = [META.proved + ' of ' + META.total + ' patterns proved on this run'];
+  if (META.costProofs) bits.push(META.costProofs + ' of them by measurement, the rest by outcome');
+  if (META.browserVersion) bits.push('Chromium ' + META.browserVersion);
+  if (META.runId) bits.push('run ' + META.runId);
+  bits.push('reproduce with: npm run bench:patterns');
+  document.getElementById('fingerprint').textContent = bits.join('  ·  ');
+})();
+</script>
+</body>
+</html>

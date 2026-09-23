@@ -37,6 +37,32 @@ jobs:
         run: |
           for f in analysis/*.mjs tools/*.mjs; do node --check "$f"; done
 
+      # results/composition.json is committed, so this regenerates the document
+      # from the same proofs the published page shows.
+      - name: Composition document regenerates and matches what is committed
+        run: |
+          npm run composition-doc
+          git diff --exit-code docs/LOCATOR-COMPOSITION.md \
+            || { echo "::error::docs/LOCATOR-COMPOSITION.md is stale. Run 'npm run composition-doc' and commit."; exit 1; }
+
+      - name: Test-level matrix regenerates and matches what is committed
+        run: |
+          npm run matrix-doc
+          git diff --exit-code docs/ACCESSIBILITY-AND-TEST-LEVELS.md \
+            || { echo "::error::The matrix in docs/ACCESSIBILITY-AND-TEST-LEVELS.md is stale. Run 'npm run matrix-doc' and commit."; exit 1; }
+
+      # The matrix and patterns pages are rebuilt here rather than taken from the
+      # repository: their links are derived from the current branch, so a committed
+      # copy and a fresh one legitimately differ and cannot be compared. The dashboard is checked as
+      # committed, since rebuilding it needs a benchmark run. Chromium only - these
+      # are static pages and a second engine would double the install for nothing.
+      - name: Generated pages render, and their popovers behave
+        run: |
+          npx playwright install --with-deps chromium
+          npm run accessibility-page
+          npm run patterns-page
+          npm run verify:pages
+
       - name: Strategy reference regenerates and matches what is committed
         run: |
           npm run reference

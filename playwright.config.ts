@@ -37,7 +37,15 @@ export default defineConfig({
     ['list'],
     // Playwright's own report, written inside the published site so it ships with
     // the dashboard rather than living only on whoever ran the suite.
-    ['html', { outputFolder: 'results/dashboard/playwright-report', open: 'never' }],
+    //
+    // BM_HTML_REPORT redirects it. The partial-suite npm scripts set it, because
+    // the reporter clears its output folder on every run: without the redirect,
+    // `npm run bench:a11y` silently replaces a 47-test published report with a
+    // 3-test one, which is a quiet way to publish something untrue.
+    ['html', {
+      outputFolder: process.env.BM_HTML_REPORT ?? 'results/dashboard/playwright-report',
+      open: 'never',
+    }],
   ],
 
   use: {
@@ -77,6 +85,21 @@ export default defineConfig({
       name: 'suite',
       testDir: './e2e/suite',
       use: { trace: 'off', video: 'off', screenshot: 'off' },
+    },
+    {
+      // Accessibility scenarios. Kept separate because they assert correctness of
+      // the page rather than measure the cost of reaching it.
+      name: 'a11y',
+      testDir: './e2e/a11y',
+      use: { trace: 'retain-on-failure', video: 'off', screenshot: 'off' },
+    },
+    {
+      // Composition patterns (S14). Records correctness proofs and a handful of
+      // paired timings into results/composition.json rather than the raw stream,
+      // so a short pattern run cannot replace a full benchmark's summary.
+      name: 'patterns',
+      testDir: './e2e/patterns',
+      use: { trace: 'retain-on-failure', video: 'off', screenshot: 'off' },
     },
     {
       name: 'robustness',

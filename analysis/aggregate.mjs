@@ -324,6 +324,36 @@ function main() {
     }))
     .sort((a, b) => a.duplicates - b.duplicates || a.strategyId.localeCompare(b.strategyId));
 
+  // --- accessibility (S13) --------------------------------------------------
+  // The counterweight to everything else here: the expensive locator families
+  // are expensive because they resolve the accessibility tree, and that work is
+  // a correctness check the cheap families cannot perform at all.
+  const accessibility = {
+    scans: records
+      .filter((r) => r.metric === 'a11y_violations')
+      .map((r) => ({
+        defects: r.dims.defects,
+        violations: r.samples[0],
+        affectedNodes: r.matches,
+        rules: r.dims.rules,
+        scanMs: r.dims.scanMs,
+        domNodes: r.domNodes,
+      }))
+      .sort((a, b) => Number(a.defects) - Number(b.defects)),
+    blindness: records
+      .filter((r) => r.metric === 'a11y_blindness')
+      .map((r) => ({
+        defect: r.dims.defect,
+        what: r.dims.what,
+        identityClean: r.dims.identityClean,
+        identityBroken: r.dims.identityBroken,
+        accessibleClean: r.dims.accessibleClean,
+        accessibleBroken: r.dims.accessibleBroken,
+        identityBlind: r.dims.identityBlind,
+        accessibleCaught: r.dims.accessibleCaught,
+      })),
+  };
+
   // --- failure cost (S10) --------------------------------------------------
   const failure = {};
   for (const r of records) {
@@ -486,6 +516,7 @@ function main() {
     robustness,
     ambiguity,
     idCollision,
+    accessibility,
     failure,
     composite,
   };

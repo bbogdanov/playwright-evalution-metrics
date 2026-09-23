@@ -9,9 +9,9 @@ failure.
 "Which locator is fastest" is the wrong headline question, and this project is
 built to prove or disprove that rather than assume it.
 
-Selector resolution is cheap relative to a CDP round trip on small DOMs, so a
-naive benchmark concludes that everything is within noise. That conclusion is
-wrong in both directions:
+Selector resolution is cheap relative to a round trip over the Chrome DevTools
+Protocol (CDP) on small DOMs, so a naive benchmark concludes that everything is
+within noise. That conclusion is wrong in both directions:
 
 - It is **too generous** at scale. At 120,000 DOM elements the spread between the
   cheapest and the dearest strategy in this matrix is roughly seven orders of
@@ -39,6 +39,8 @@ failure cost, then ranks on a composite.
 | S10 | Failure cost | What does a broken locator cost in wall clock and in diagnosis? |
 | S11 | Suite wall clock | Does any of it change the CI bill? |
 | S12 | Depth at fixed element count | Does depth cost anything on its own? |
+| S13 | Accessibility | What do the expensive locators buy that the cheap ones cannot? |
+| S14 | Composition patterns | How do locators behave in fixtures, chains and assertions? |
 
 31 locator strategies across eight families, all resolving to the **same physical
 element** — the descriptor is read back out of the rendered DOM, so the spec
@@ -64,14 +66,26 @@ npm run app:build          # production build; ng serve would contaminate timing
 npm run bench              # every project
 npm run bench:micro        # S1, S2, S7, S12
 npm run bench:macro        # S3, S4, S8, S9, S10
+npm run bench:a11y         # S13
+npm run bench:patterns     # S14, writes results/composition.json
 npx playwright test --project=robustness   # S5, S6
 node tools/run-suite-scale.mjs             # S11
 
-npm run report             # aggregate + dashboard + docs/LOCATOR-REFERENCE.md
+npm run report             # aggregate + both pages + both generated documents
 npm run reference          # regenerate the locator reference on its own
+npm run accessibility-page # regenerate the test-level matrix page on its own
+npm run patterns-page      # regenerate the composition patterns page on its own
+npm run matrix-doc         # regenerate the matrix table inside the document
+npm run composition-doc    # regenerate docs/LOCATOR-COMPOSITION.md
+npm run verify:pages       # open both generated pages in a browser and check them
 
 ./tools/stop-bench.sh      # stop a run completely, workers included
 ```
+
+Partial-suite scripts write their Playwright report to a scratch directory, not
+to the published one. The HTML reporter clears its output folder on every run, so
+without that a `npm run bench:a11y` would silently replace a 47-test published
+report with a 3-test one. Only a full `npm run bench` writes the published report.
 
 `results/raw/` is append-only and can hold several runs. `npm run analyze`
 analyses the newest one and says which it ignored; `BM_RUN=<id>` picks one, and
@@ -79,7 +93,10 @@ analyses the newest one and says which it ignored; `BM_RUN=<id>` picks one, and
 an environment.
 
 Open `results/dashboard/index.html` directly from disk — it has no network
-dependencies.
+dependencies. `results/dashboard/accessibility.html` sits beside it and holds the
+test-level matrix, where every Yes/No opens the reasoning and an example;
+`results/dashboard/patterns.html` holds the composition patterns, where every chip
+opens what that pattern did when it ran.
 
 `npm run analyze` also prints every query whose median reached one second,
 together with its target's depth, sibling count and ancestor path. The threshold
@@ -100,9 +117,60 @@ under test:
 /shadow?enc=shadow&rows=150       encapsulation
 /virtual?rows=20000&virtual=1     virtual scrolling
 /material?dup=24&cols=5           CDK overlays
+/a11y?rows=20&defects=1           accessibility defects (defects=0 is the fix)
 ```
 
 Mutations apply to any route: `?mutate=locale,classHash,wrap,reorder,reword,attrRename,classRename`
+
+## The other half of the story
+
+Read on its own, this project says "role and text locators are slow, use test
+ids". That conclusion is wrong, and
+[docs/ACCESSIBILITY-AND-TEST-LEVELS.md](docs/ACCESSIBILITY-AND-TEST-LEVELS.md) is
+the counterweight.
+
+`getByRole` is expensive because it resolves the accessibility tree — the same
+work a screen reader does. S13 measures what that buys: with an icon button
+stripped of its accessible name, an input stripped of its label, and an image
+stripped of its alt text, `getByTestId` finds all three in **both** the correct
+and the broken page, while the accessible locators stop resolving. A suite
+written entirely on test ids stays green through all three regressions.
+
+Cost also depends entirely on scale: `role.name` is **1.7 ms** at 434 elements
+and **588 ms** at 120,034. That document carries the
+**test-level × locator matrix** — unit, integration, smoke, E2E — and the short
+version is: use accessible locators by default at unit and integration scale
+where they are effectively free, scope them at E2E scale, and never let the cost
+figures in this repo talk you out of them on a small DOM.
+
+The matrix is rendered as a page as well — `results/dashboard/accessibility.html`,
+linked from the dashboard header — where every cell opens the reasoning behind
+that verdict and the code it recommends. Page and document are generated from the
+same `analysis/a11y-matrix.mjs`, so they cannot drift apart.
+
+## How locators compose
+
+Every other scenario measures one locator against one element. Nobody writes tests
+that way. S14 takes the compositions people actually write — a fixture handing out a
+locator, a page object, a chain, an index, an awaited value — and pairs each with the
+form it should have been. Thirteen pairs, each proved rather than asserted:
+
+| | Don't | Do | Measured |
+|---|---|---|---|
+| Scope a role query | `page.getByRole(...)` | `row.getByRole(...)` | 208 ms → **38 ms** |
+| Chain from a unique root | `page.locator('tr').locator('td')...` | `grid.row(750).locator('td')...` | 2.01 s → **35 ms** |
+| Filter a narrow set | `getByRole('row').filter({ hasText })` | `getByTestId('row.750')` | 178 ms → **9 ms** |
+| Wait without sleeping | `waitForTimeout(3000)` | `expect(...).toHaveCount(1)` | 3.02 s → **802 ms** |
+
+The other nine are not about speed — they are about the DON'T quietly producing the
+wrong answer, and each one records what it produced: an element handle detached by a
+re-render, `.first()` resolving to a decoy that reuses the target's id, `nth(2)`
+moving to another column when the template reorders, `count()` returning 0 while the
+control is still 800 ms away, `all()` handing back positions that no longer hold.
+
+The examples on the page and in
+[docs/LOCATOR-COMPOSITION.md](docs/LOCATOR-COMPOSITION.md) are extracted from the
+scenario source between markers, so what is published is the code that ran.
 
 ## Methodology
 
@@ -204,7 +272,7 @@ byte-identical DOM across runs and machines.
 
 ## Publishing
 
-`.github/workflows/pages.yml` deploys `results/dashboard/index.html` to GitHub
+`.github/workflows/pages.yml` deploys `results/dashboard/` to GitHub
 Pages on every push to `main`. **It needs one manual step, once**, before the
 first deploy can succeed:
 
@@ -231,12 +299,13 @@ reference still matches what the generator produces.
 
 ```
 app/                Angular 22 subject application (Material + CDK)
-docs/               generated locator reference
+docs/               generated locator reference and composition patterns, accessibility guidance
 e2e/harness/        measurement primitives, fixtures, env capture, record emitter
 e2e/locators/       the strategy matrix and the DOM descriptor
-e2e/micro|macro|robustness|suite/   the scenarios
+e2e/micro|macro|robustness|a11y|patterns|suite/   the scenarios
 analysis/           aggregation, statistics, dashboard generation
 tools/              static server, S11 driver
 results/raw/        append-only NDJSON, one file per worker per run
+results/composition.json   S14 proofs, kept out of the raw stream on purpose
 results/dashboard/  generated HTML
 ```

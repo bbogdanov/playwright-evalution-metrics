@@ -1,0 +1,57 @@
+<section class="bm-a11y-page">
+  <h1>Accessibility surface — {{ defects() ? 'with defects' : 'corrected' }}</h1>
+  <p class="bm-status">
+    mode: <span data-testid="status.a11y-mode">{{ defects() ? 'defects' : 'clean' }}</span>
+    / last: <span data-testid="status.last-clicked.value">{{ log.last() }}</span>
+  </p>
+
+  @for (i of rows(); track i) {
+    <fieldset class="bm-a11y-set" [attr.data-testid]="'a11y.set.' + i">
+      <legend>Record {{ i }}</legend>
+
+      <!-- 1. Icon-only control. With defects the glyph is hidden from the
+           accessibility tree and nothing replaces it, so the button has no
+           accessible name: getByRole('button', { name }) cannot reach it while
+           getByTestId can.
+
+           The glyph is marked aria-hidden deliberately. Left exposed, the emoji
+           itself counts as the accessible name and axe reports no violation at
+           all - the button passes an automated scan while announcing itself as
+           "wastebasket". That is worth knowing, and it is why a scan being clean
+           is weaker evidence than a role-based locator continuing to resolve. -->
+      @if (defects()) {
+        <button type="button" class="bm-icon-btn" [attr.data-testid]="'a11y.delete.' + i"
+                (click)="record('delete-' + i)"><span aria-hidden="true">&#128465;</span></button>
+      } @else {
+        <button type="button" class="bm-icon-btn" [attr.data-testid]="'a11y.delete.' + i"
+                [attr.aria-label]="'Delete record ' + i"
+                (click)="record('delete-' + i)"><span aria-hidden="true">&#128465;</span></button>
+      }
+
+      <!-- 2. Text input. With defects nothing associates the visible text with the
+           control, so getByLabel finds nothing. -->
+      @if (defects()) {
+        <span class="bm-field-text">Account owner</span>
+        <input type="text" class="bm-a11y-input" [attr.data-testid]="'a11y.owner.' + i" />
+      } @else {
+        <label class="bm-field-text" [attr.for]="'a11y-owner-' + i">Account owner</label>
+        <input type="text" class="bm-a11y-input" [attr.id]="'a11y-owner-' + i"
+               [attr.data-testid]="'a11y.owner.' + i" />
+      }
+
+      <!-- 3. Image. With defects there is no alt text. -->
+      @if (defects()) {
+        <img class="bm-a11y-img" [attr.data-testid]="'a11y.avatar.' + i"
+             src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" />
+      } @else {
+        <img class="bm-a11y-img" [attr.data-testid]="'a11y.avatar.' + i"
+             [attr.alt]="'Avatar for record ' + i"
+             src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" />
+      }
+
+      <!-- 4. Text contrast. The defective variant sits below the WCAG AA ratio. -->
+      <p class="bm-a11y-note" [class.bm-low-contrast]="defects()"
+         [attr.data-testid]="'a11y.note.' + i">Updated last quarter</p>
+    </fieldset>
+  }
+</section>

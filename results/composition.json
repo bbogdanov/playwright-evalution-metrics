@@ -1,0 +1,159 @@
+{
+  "runId": "20260921090556",
+  "generatedAt": "2026-09-21T09:07:57.961Z",
+  "browserVersion": "141.0.7390.37",
+  "proofs": {
+    "fixture.handle": {
+      "pattern": "fixture.handle",
+      "kind": "correctness",
+      "url": "/churn?rows=40&hz=10&trackby=0",
+      "dont": "element handle detached after one re-render; click failed with \"elementHandle.click: Element is not attached to the DOM\"",
+      "did": "locator re-resolved and clicked the current element",
+      "facts": {
+        "stillAttached": false,
+        "domNodes": 103,
+        "clicked": "churn-12"
+      }
+    },
+    "fixture.state": {
+      "pattern": "fixture.state",
+      "kind": "correctness",
+      "url": "/late?lateMode=append&delay=800&rows=200",
+      "dont": "count() in the constructor returned 0",
+      "did": "the same locator, asserted rather than counted, resolved to 1",
+      "facts": {
+        "delayMs": 800,
+        "constructorCount": 0,
+        "laterCount": 1
+      }
+    },
+    "fixture.lazy": {
+      "pattern": "fixture.lazy",
+      "kind": "correctness",
+      "url": "/late?lateMode=append&delay=0&rows=200",
+      "dont": "page.$() before navigation returned null, and would have to be re-resolved after every navigation",
+      "did": "the locator built before navigation resolved to 1 element afterwards",
+      "facts": {
+        "resolved": 1
+      }
+    },
+    "fixture.binding": {
+      "pattern": "fixture.binding",
+      "kind": "correctness",
+      "url": "/grid?rows=5&cols=6&seed=bm-v1",
+      "dont": "the captured locator kept reporting 5 rows, its own page's count, after a second page opened",
+      "did": "a locator built from the second page reported 40",
+      "facts": {
+        "firstPageRows": 5,
+        "secondPageRows": 40,
+        "seenFromFirst": 5,
+        "seenFromSecond": 40
+      }
+    },
+    "scope.role": {
+      "pattern": "scope.role",
+      "kind": "cost",
+      "url": "/grid?rows=1500&cols=6&seed=bm-v1",
+      "domNodes": 30034,
+      "doMs": 38.298577500041574,
+      "dontMs": 208.2481020000996,
+      "facts": {
+        "role": "button",
+        "name": "Status for row 750"
+      }
+    },
+    "scope.chain": {
+      "pattern": "scope.chain",
+      "kind": "cost",
+      "url": "/grid?rows=1500&cols=6&seed=bm-v1",
+      "domNodes": 30034,
+      "doMs": 35.4270129998913,
+      "dontMs": 2005.8830290000187,
+      "facts": {
+        "chainSteps": 3,
+        "broadFirstStep": 1500
+      }
+    },
+    "scope.filter": {
+      "pattern": "scope.filter",
+      "kind": "cost",
+      "url": "/grid?rows=1500&cols=6&seed=bm-v1",
+      "domNodes": 30034,
+      "doMs": 9.09746499999892,
+      "dontMs": 178.16232299990952,
+      "facts": {
+        "candidateRows": 1500
+      }
+    },
+    "strict.first": {
+      "pattern": "strict.first",
+      "kind": "correctness",
+      "url": "/ambiguous?dup=60&dupIds=4&target=30",
+      "dont": ".first() resolved to a decoy (data-clash=\"0\") while reporting success",
+      "did": "the scoped locator resolved to data-testid=\"action.30\"",
+      "facts": {
+        "idMatches": 5,
+        "strictError": "locator.click: Error: strict mode violation: locator('#action-r30') resolved to 5 elements:"
+      }
+    },
+    "strict.nth": {
+      "pattern": "strict.nth",
+      "kind": "correctness",
+      "url": "/grid?rows=40&cols=6&seed=bm-v1&mutate=reorder",
+      "dont": "nth(2) resolved to column 2 before the reorder and column 3 after it",
+      "did": "the identity locator resolved to column 2 both times",
+      "facts": {
+        "mutation": "reorder",
+        "positionBefore": "2",
+        "positionAfter": "3"
+      }
+    },
+    "wait.count": {
+      "pattern": "wait.count",
+      "kind": "correctness",
+      "url": "/late?lateMode=append&delay=800&rows=200",
+      "dont": "count() returned 0 while the control was still 800ms away",
+      "did": "toHaveCount(1) retried for 798ms and passed",
+      "facts": {
+        "delayMs": 800,
+        "countNow": 0,
+        "waitedMs": 798
+      }
+    },
+    "wait.all": {
+      "pattern": "wait.all",
+      "kind": "correctness",
+      "url": "/churn?rows=40&hz=10&trackby=0",
+      "dont": "items[3] read \"v3.1\" and then \"v3.2\" without anything re-reading the list",
+      "did": "an identity locator kept pointing at data-row=\"3\" across the same re-render",
+      "facts": {
+        "items": 40,
+        "thirdValueThen": "v3.1",
+        "thirdValueNow": "v3.2"
+      }
+    },
+    "wait.snapshot": {
+      "pattern": "wait.snapshot",
+      "kind": "correctness",
+      "url": "/churn?rows=40&hz=10&trackby=0",
+      "dont": "the captured string still reads \"v7.0\" after the element changed to \"v7.1\"",
+      "did": "the assertion re-read the element and matched its current value",
+      "facts": {
+        "captured": "v7.0",
+        "current": "v7.1"
+      }
+    },
+    "wait.sleep": {
+      "pattern": "wait.sleep",
+      "kind": "cost",
+      "url": "/late?lateMode=append&delay=800&rows=200",
+      "domNodes": 223,
+      "doMs": 802,
+      "dontMs": 3024,
+      "facts": {
+        "renderDelayMs": 800,
+        "sleepMs": 3000
+      }
+    }
+  }
+}

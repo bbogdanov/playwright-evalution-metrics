@@ -1,4 +1,5 @@
 import { PALETTE, STATUS, OUTCOME_STATUS } from './palette.mjs';
+import { tokenBlock, SHELL_STYLES, SHELL_SCRIPT } from './page-shell.mjs';
 
 /**
  * Plain-language definitions for the terms this dashboard uses.
@@ -65,8 +66,13 @@ export const GLOSSARY = {
   },
   'round-trip': {
     term: 'round trip',
-    short: 'One request from the test process to the browser and back.',
+    short: 'One CDP request from the test process to the browser and back.',
     detail: 'Every locator call pays one. On this machine it costs more than most queries do, which is why the paired design exists and why the cheapest strategies all measure at the floor rather than at their true cost.',
+  },
+  cdp: {
+    term: 'CDP',
+    short: 'Chrome DevTools Protocol: how Playwright talks to the browser.',
+    detail: 'A message-based protocol over a WebSocket. Your test runs in Node, the page runs in the browser process, and every locator call \u2014 count, click, an assertion\u0027s retry \u2014 is a message across that boundary and an answer back. That transport, not the selector, is most of what a naive timing measures on a small page, which is what the paired design exists to remove. It is also where the mechanism profile comes from: a CDP trace counts what work a query caused rather than how long it took.',
   },
   'at-floor': {
     term: 'at floor',
@@ -123,6 +129,11 @@ export const GLOSSARY = {
     short: 'How many element levels below <body> the target sits.',
     detail: 'Recorded on every measurement and counted through shadow boundaries. Depth and page size are normally confounded \u2014 deeper pages are usually bigger pages \u2014 so a separate scenario holds the element count fixed and varies only depth.',
   },
+  'role-cost': {
+    term: 'why role locators cost more',
+    short: 'They resolve the accessibility tree; no DOM API does that for you.',
+    detail: 'No browser API answers "which elements have this role and this accessible name", so Playwright computes an accessible name for every candidate of that role \u2014 following aria-label, aria-labelledby, associated labels, alt, title and text content in specification order. That is the cost, and it is also the value: if the name cannot be computed there is no name, and the locator failing is a defect report rather than a test problem.',
+  },
   first: {
     term: '.first()',
     short: 'Takes the first match in document order instead of failing on several.',
@@ -136,22 +147,6 @@ export const GLOSSARY = {
 };
 
 
-/** CSS custom properties per mode, emitted for both the OS setting and the theme toggle. */
-function tokenBlock(mode) {
-  const p = PALETTE[mode];
-  return `
-    color-scheme: ${mode};
-    --surface-1: ${p.surface};
-    --plane: ${p.plane};
-    --text-primary: ${p.primary};
-    --text-secondary: ${p.secondary};
-    --text-muted: ${p.muted};
-    --grid: ${p.grid};
-    --axis: ${p.axis};
-    --border: ${p.border};
-${p.series.map((c, i) => `    --series-${i + 1}: ${c};`).join('\n')}
-${p.seq.map((c, i) => `    --seq-${i}: ${c};`).join('\n')}`;
-}
 
 export function renderHtml(summary) {
   const data = JSON.stringify(summary).replace(/</g, '\\u003c');
@@ -225,71 +220,9 @@ summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
 .chip.ok { color: var(--status-good); border-color: var(--status-good); }
 .chip.no { color: var(--status-critical); border-color: var(--status-critical); }
 .chip.meh { color: var(--text-muted); }
-/* A defined term. Dotted underline rather than a link colour, so it reads as
-   "there is an explanation here" and not as navigation away from the page. */
-.term {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: 0;
-  padding: 0 1px;
-  border-bottom: 1px dotted var(--text-muted);
-  cursor: help;
-}
-.term:hover, .term:focus-visible { border-bottom-style: solid; color: var(--series-1); outline: none; }
-.term[aria-expanded="true"] { border-bottom-style: solid; color: var(--series-1); }
-.term-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.95em;
-  border-bottom: 1px dotted var(--text-muted);
-  cursor: help;
-  background: none; border-top: 0; border-left: 0; border-right: 0;
-  color: inherit; padding: 0;
-}
-.term-code:hover, .term-code:focus-visible { color: var(--series-1); border-bottom-style: solid; outline: none; }
-
-/* Pinned, clickable popover. Distinct from #tip, which is a hover-only chart
-   tooltip with pointer-events disabled and therefore cannot hold a link. */
-#pop {
-  position: fixed;
-  z-index: 60;
-  max-width: 380px;
-  background: var(--surface-1);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 12px 14px;
-  box-shadow: 0 10px 34px rgba(0,0,0,.20);
-  font: 13px/1.55 system-ui, sans-serif;
-  display: none;
-}
-#pop[data-open="true"] { display: block; }
-#pop .pop-term { font-weight: 600; font-size: 13.5px; margin-bottom: 4px; }
-#pop .pop-short { color: var(--text-primary); margin-bottom: 8px; }
-#pop .pop-detail { color: var(--text-secondary); font-size: 12.5px; }
-#pop .pop-call {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11.5px;
-  background: var(--plane);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 6px 8px;
-  margin: 6px 0 8px;
-  overflow-wrap: anywhere;
-}
-#pop .pop-close {
-  position: absolute; top: 6px; right: 8px;
-  background: none; border: 0; color: var(--text-muted);
-  font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 4px;
-}
-#pop .pop-close:hover { color: var(--text-primary); }
-.ref-link {
-  font-size: 12.5px;
-  color: var(--series-1);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-}
-.ref-link:hover { border-bottom-color: currentColor; }
+/* Terms, the pinned popover, the reference link and the theme toggle come from
+   page-shell.mjs, so this page and the accessibility matrix cannot drift. */
+${SHELL_STYLES}
 .glossary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 18px; }
 .glossary-grid .g-item { border-left: 2px solid var(--grid); padding-left: 10px; }
 .glossary-grid .g-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
@@ -303,7 +236,6 @@ summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
 }
 #tip b { font-weight: 600; }
 #tip .m { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-.toggle { float: right; font-size: 12px; color: var(--text-secondary); background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
 @media (max-width: 640px) { .wrap { padding: 20px 16px 72px; } th, td { padding: 4px 6px; } }
 </style>
 </head>
@@ -334,6 +266,7 @@ ${CLIENT_JS}
 }
 
 const CLIENT_JS = String.raw`
+${SHELL_SCRIPT}
 const S = JSON.parse(document.getElementById('data').textContent);
 const OUTCOME = ${JSON.stringify(OUTCOME_STATUS)};
 const tip = document.getElementById('tip');
@@ -346,7 +279,6 @@ const fmtMs = (v) =>
   : v >= 1 ? v.toFixed(2) + ' ms'
   : v.toFixed(3) + ' ms';
 const pct = (v) => (Number.isFinite(v) ? Math.round(v * 100) + '%' : '-');
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function showTip(html, ev) {
   tip.innerHTML = html;
@@ -382,55 +314,6 @@ const svgEl = (name, attrs = {}) => {
 // --- glossary and reference popover ----------------------------------------
 const G = JSON.parse(document.getElementById('glossary').textContent);
 const STRAT = new Map((S.strategies || []).map((x) => [x.id, x]));
-const pop = document.getElementById('pop');
-let popTrigger = null;
-
-/**
- * Opens the pinned popover anchored to an element.
- *
- * Pinned rather than hover-only because the content is long enough to want to
- * read at your own pace, and because it can contain a link. Placed below the
- * trigger, flipped above when there is not enough room, and clamped to the
- * viewport so it never renders off-screen on a phone.
- */
-function openPop(trigger, html) {
-  if (popTrigger === trigger && pop.dataset.open === 'true') { closePop(); return; }
-  closePop();
-  popTrigger = trigger;
-  pop.innerHTML = '<button class="pop-close" type="button" aria-label="Close">×</button>' + html;
-  pop.dataset.open = 'true';
-  trigger.setAttribute('aria-expanded', 'true');
-
-  const t = trigger.getBoundingClientRect();
-  const r = pop.getBoundingClientRect();
-  const margin = 8;
-  let top = t.bottom + 6;
-  if (top + r.height > innerHeight - margin) {
-    const above = t.top - r.height - 6;
-    top = above >= margin ? above : Math.max(margin, innerHeight - r.height - margin);
-  }
-  let left = t.left;
-  if (left + r.width > innerWidth - margin) left = innerWidth - r.width - margin;
-  pop.style.left = Math.max(margin, left) + 'px';
-  pop.style.top = top + 'px';
-
-  pop.querySelector('.pop-close').addEventListener('click', closePop);
-}
-
-function closePop() {
-  pop.dataset.open = 'false';
-  if (popTrigger) popTrigger.setAttribute('aria-expanded', 'false');
-  popTrigger = null;
-}
-
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePop(); });
-document.addEventListener('click', (e) => {
-  if (pop.dataset.open !== 'true') return;
-  if (pop.contains(e.target) || (popTrigger && popTrigger.contains(e.target))) return;
-  closePop();
-});
-addEventListener('scroll', () => { if (pop.dataset.open === 'true') closePop(); }, { passive: true });
-addEventListener('resize', closePop);
 
 function termHtml(key) {
   const g = G[key];
@@ -489,6 +372,14 @@ document.addEventListener('click', (e) => {
   if (S.referenceUrl) {
     parts.push('<a class="ref-link" href="' + esc(S.referenceUrl) + '" target="_blank" rel="noopener">' +
                'Locator reference — what every strategy actually executes →</a>');
+  }
+  if (S.accessibilityPage) {
+    parts.push('<a class="ref-link" href="' + esc(S.accessibilityPage) + '">' +
+               'Accessibility and test levels — which locator at which level →</a>');
+  }
+  if (S.patternsPage) {
+    parts.push('<a class="ref-link" href="' + esc(S.patternsPage) + '">' +
+               'Composition patterns — fixtures, chaining, waiting, proved →</a>');
   }
   if (S.playwrightReport) {
     parts.push('<a class="ref-link" href="' + esc(S.playwrightReport) + '">' +
@@ -1295,6 +1186,82 @@ function tableView(sec, headers, rows, caption) {
   sec.appendChild(wrap);
 })();
 
+// --- accessibility: what the fast locators cannot see -----------------------
+(function accessibility() {
+  const a = S.accessibility;
+  if (!a || (!a.blindness?.length && !a.scans?.length)) return;
+
+  const sec = section(
+    'What the fast locators cannot see',
+    'The counterweight to every other section. [[role-cost|The expensive families are expensive]] because they ' +
+    'resolve the accessibility tree, and that is the same work a screen reader does — so they fail when there ' +
+    'is nothing to resolve. The same controls are rendered twice, correct and deliberately broken, and both ' +
+    'kinds of locator are asked to find them.'
+  );
+
+  if (a.blindness?.length) {
+    const wrap = document.createElement('div');
+    wrap.className = 'scroll';
+    const t = document.createElement('table');
+    t.innerHTML =
+      '<thead><tr><th>Regression</th><th class="num">Test id: correct → broken</th>' +
+      '<th class="num">Accessible locator: correct → broken</th><th>Verdict</th></tr></thead><tbody>' +
+      a.blindness.map((b) =>
+        '<tr><td>' + esc(b.what) + ' <span class="chip meh">' + esc(b.defect) + '</span></td>' +
+        '<td class="num">' + b.identityClean + ' → <b>' + b.identityBroken + '</b></td>' +
+        '<td class="num">' + b.accessibleClean + ' → <b>' + b.accessibleBroken + '</b></td>' +
+        '<td><span class="chip ' + (b.accessibleCaught ? 'ok' : 'no') + '">' +
+          (b.identityBlind && b.accessibleCaught
+            ? 'test id blind, accessible locator caught it'
+            : 'inconclusive') + '</span></td></tr>'
+      ).join('') + '</tbody>';
+    wrap.appendChild(t);
+    sec.appendChild(wrap);
+
+    const note = document.createElement('p');
+    note.className = 'lede';
+    note.style.marginTop = '14px';
+    note.innerHTML = 'The identity locator is <em>unchanged</em> by every one of these regressions. A suite ' +
+      'written entirely on test ids stays green while the interface becomes unusable with a screen reader.';
+    sec.appendChild(note);
+  }
+
+  if (a.scans?.length) {
+    const h = document.createElement('p');
+    h.className = 'lede';
+    h.style.marginTop = '16px';
+    h.innerHTML = '<b>axe-core scan of the same two pages.</b>';
+    sec.appendChild(h);
+
+    const w2 = document.createElement('div');
+    w2.className = 'scroll';
+    const t2 = document.createElement('table');
+    t2.innerHTML =
+      '<thead><tr><th>Page</th><th class="num">Violations</th><th class="num">Affected nodes</th>' +
+      '<th class="num">Scan</th><th>Rules</th></tr></thead><tbody>' +
+      a.scans.map((r) =>
+        '<tr><td>' + (r.defects ? 'With defects' : 'Corrected') + '</td>' +
+        '<td class="num"><span class="chip ' + (r.violations ? 'no' : 'ok') + '">' + r.violations + '</span></td>' +
+        '<td class="num">' + r.affectedNodes + '</td>' +
+        '<td class="num">' + fmtMs(r.scanMs) + '</td>' +
+        '<td style="white-space:normal;font-size:11px;color:var(--text-muted)">' + esc(r.rules || '—') + '</td></tr>'
+      ).join('') + '</tbody>';
+    w2.appendChild(t2);
+    sec.appendChild(w2);
+
+    const caveat = document.createElement('p');
+    caveat.className = 'lede';
+    caveat.style.marginTop = '14px';
+    caveat.innerHTML = '<b>A clean scan is weaker evidence than it looks.</b> The icon button in this page ' +
+      'originally used a \u{1F5D1} emoji as its only content, and axe reported no missing-name violation at all — ' +
+      'the emoji counts as the accessible name, so the button passed the scan while announcing itself as ' +
+      '"wastebasket". It only became detectable once the glyph was hidden from the accessibility tree. A ' +
+      'role-based locator that resolves <em>to the name you expected</em> is the stronger signal, because it ' +
+      'asserts the name is right rather than merely present.';
+    sec.appendChild(caveat);
+  }
+})();
+
 // --- glossary ---------------------------------------------------------------
 (function glossarySection() {
   const sec = section(
@@ -1327,18 +1294,4 @@ function tableView(sec, headers, rows, caption) {
   }
 })();
 
-// --- theme toggle ----------------------------------------------------------
-(function theme() {
-  const btn = document.getElementById('themeToggle');
-  let stored = null;
-  try { stored = localStorage.getItem('bm-theme'); } catch { /* private mode */ }
-  if (stored) document.documentElement.setAttribute('data-theme', stored);
-  btn.addEventListener('click', () => {
-    const cur = document.documentElement.getAttribute('data-theme');
-    const isDark = cur ? cur === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-    const next = isDark ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    try { localStorage.setItem('bm-theme', next); } catch { /* ignore */ }
-  });
-})();
 `;

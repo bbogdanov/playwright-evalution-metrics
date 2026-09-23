@@ -16,5 +16,6 @@ export const routes: Routes = [
   { path: 'shadow', loadComponent: () => import('./routes/shadow/shadow.component').then((m) => m.ShadowComponent) },
   { path: 'virtual', loadComponent: () => import('./routes/virtual/virtual.component').then((m) => m.VirtualComponent) },
   { path: 'material', loadComponent: () => import('./routes/material/material.component').then((m) => m.MaterialComponent) },
+  { path: 'a11y', loadComponent: () => import('./routes/a11y/a11y.component').then((m) => m.A11yComponent) },
   { path: '**', redirectTo: '' },
 ];
