@@ -1,5 +1,5 @@
 import { PALETTE, STATUS, OUTCOME_STATUS } from './palette.mjs';
-import { tokenBlock, SHELL_STYLES, SHELL_SCRIPT } from './page-shell.mjs';
+import { tokenBlock, SHELL_STYLES, SHELL_SCRIPT, NAV_STYLES, NAV_SCRIPT } from './page-shell.mjs';
 
 /**
  * Plain-language definitions for the terms this dashboard uses.
@@ -148,7 +148,8 @@ export const GLOSSARY = {
 
 
 
-export function renderHtml(summary) {
+/** `nav` is the site bar from page-shell's siteNav(), rendered by the caller, which knows the output directory. */
+export function renderHtml(summary, nav = '') {
   const data = JSON.stringify(summary).replace(/</g, '\\u003c');
   const glossary = JSON.stringify(GLOSSARY).replace(/</g, '\\u003c');
   return `<!doctype html>
@@ -223,6 +224,7 @@ summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
 /* Terms, the pinned popover, the reference link and the theme toggle come from
    page-shell.mjs, so this page and the accessibility matrix cannot drift. */
 ${SHELL_STYLES}
+${NAV_STYLES}
 .glossary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 18px; }
 .glossary-grid .g-item { border-left: 2px solid var(--grid); padding-left: 10px; }
 .glossary-grid .g-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
@@ -239,21 +241,20 @@ ${SHELL_STYLES}
 @media (max-width: 640px) { .wrap { padding: 20px 16px 72px; } th, td { padding: 4px 6px; } }
 </style>
 </head>
-<body>
-<div class="wrap">
-  <button class="toggle" id="themeToggle" type="button">Theme</button>
+<body data-toc>
+${nav}
+<main class="wrap" id="main" tabindex="-1">
   <header>
     <h1>Playwright locator strategies</h1>
     <p class="sub">
       Measured against a controlled Angular application. Every strategy resolves the same physical element.
     </p>
-    <p class="sub" id="headerLinks"></p>
   </header>
   <div id="fingerprint" class="fingerprint"></div>
   <div id="caveats"></div>
   <div class="tiles" id="tiles"></div>
   <div id="sections"></div>
-</div>
+</main>
 <div id="tip" role="status" aria-live="polite"></div>
 <div id="pop" role="dialog" aria-modal="false" aria-label="Definition"></div>
 <script id="data" type="application/json">${data}</script>
@@ -267,6 +268,7 @@ ${CLIENT_JS}
 
 const CLIENT_JS = String.raw`
 ${SHELL_SCRIPT}
+${NAV_SCRIPT}
 const S = JSON.parse(document.getElementById('data').textContent);
 const OUTCOME = ${JSON.stringify(OUTCOME_STATUS)};
 const tip = document.getElementById('tip');
@@ -365,29 +367,6 @@ document.addEventListener('click', (e) => {
   const st = e.target.closest('[data-strategy]');
   if (st) { e.stopPropagation(); openPop(st, strategyHtml(st.dataset.strategy)); }
 });
-
-// --- header links ------------------------------------------------------------
-(function headerLinks() {
-  const parts = [];
-  if (S.referenceUrl) {
-    parts.push('<a class="ref-link" href="' + esc(S.referenceUrl) + '" target="_blank" rel="noopener">' +
-               'Locator reference — what every strategy actually executes →</a>');
-  }
-  if (S.accessibilityPage) {
-    parts.push('<a class="ref-link" href="' + esc(S.accessibilityPage) + '">' +
-               'Accessibility and test levels — which locator at which level →</a>');
-  }
-  if (S.patternsPage) {
-    parts.push('<a class="ref-link" href="' + esc(S.patternsPage) + '">' +
-               'Composition patterns — fixtures, chaining, waiting, proved →</a>');
-  }
-  if (S.playwrightReport) {
-    parts.push('<a class="ref-link" href="' + esc(S.playwrightReport) + '">' +
-               'Playwright run report — every test, timing and failure →</a>');
-  }
-  parts.push('<a class="ref-link" href="#glossary-section">Glossary ↓</a>');
-  document.getElementById('headerLinks').innerHTML = parts.join(' &nbsp;·&nbsp; ');
-})();
 
 function section(title, lede) {
   const s = document.createElement('section');

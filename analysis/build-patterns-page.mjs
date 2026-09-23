@@ -14,7 +14,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { STATUS } from './palette.mjs';
-import { tokenBlock, SHELL_STYLES, SHELL_SCRIPT } from './page-shell.mjs';
+import { tokenBlock, SHELL_STYLES, SHELL_SCRIPT, NAV_STYLES, NAV_SCRIPT, siteNav } from './page-shell.mjs';
 import { FAMILIES, PATTERNS } from './composition-patterns.mjs';
 import { snippetsFor } from './snippets.mjs';
 import { blobUrl } from './repo-link.mjs';
@@ -22,6 +22,7 @@ import { blobUrl } from './repo-link.mjs';
 const SPEC = 'e2e/patterns/s14-composition.spec.ts';
 const OUT = resolve(process.env.BM_PATTERNS_PAGE ?? 'results/dashboard/patterns.html');
 const PROOFS = resolve(process.env.BM_COMPOSITION ?? 'results/composition.json');
+const SPEC_URL = blobUrl(SPEC);
 
 const esc = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -149,9 +150,6 @@ header h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
 .sub { color: var(--text-secondary); margin: 0 0 6px; max-width: 78ch; }
 h2 { font-size: 17px; margin: 40px 0 6px; letter-spacing: -0.005em; }
 .lede { color: var(--text-secondary); margin: 0 0 18px; max-width: 78ch; }
-.jump { margin: 18px 0 26px; font-size: 13px; color: var(--text-muted); }
-.jump a { color: var(--series-1); text-decoration: none; }
-.jump a:hover { text-decoration: underline; }
 
 .pattern {
   background: var(--surface-1);
@@ -233,27 +231,24 @@ h2 { font-size: 17px; margin: 40px 0 6px; letter-spacing: -0.005em; }
 #pop .pop-row .v { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; text-align: right; }
 #pop .pop-note { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
 ${SHELL_STYLES}
+${NAV_STYLES}
 @media (max-width: 760px) {
   .pair, .setup-code { grid-template-columns: 1fr; }
   .wrap { padding: 20px 16px 72px; }
 }
 </style>
 </head>
-<body>
-<div class="wrap">
-  <button class="toggle" id="themeToggle" type="button">Theme</button>
+<body data-toc>
+${siteNav('patterns', dirname(OUT))}
+<main class="wrap" id="main" tabindex="-1">
   <header>
     <h1>Locator composition patterns</h1>
     <p class="sub">
       What happens when locators meet fixtures, page objects, chaining and assertions. Every pair is the code
       from one scenario in this repository, and every chip opens what that code did when it ran.
     </p>
-    <p class="sub" id="headerLinks"></p>
-  </header>
-
-  <p class="jump">
-    ${FAMILIES.map((f) => `<a href="#family-${esc(f.id)}">${esc(f.title)}</a>`).join(' &nbsp;·&nbsp; ')}
-  </p>
+${SPEC_URL ? `    <p class="sub"><a class="ref-link" href="${esc(SPEC_URL)}" target="_blank" rel="noopener">The scenario that produced all of this &rarr;</a></p>
+` : ''}  </header>
 
   <section class="setup">
     <h2>What the examples are written against</h2>
@@ -271,7 +266,7 @@ ${SHELL_STYLES}
 ${familySections}
 
   <p class="fingerprint" id="fingerprint"></p>
-</div>
+</main>
 <div id="pop" role="dialog" aria-modal="false" aria-label="What the measurement showed"></div>
 <script id="proofs" type="application/json">${JSON.stringify(PROOF_TEXT).replace(/</g, '\\u003c')}</script>
 <script>
@@ -283,11 +278,9 @@ const META = ${JSON.stringify({
   proved,
   total: PATTERNS.length,
   costProofs,
-  specUrl: blobUrl(SPEC),
-  dashboard: 'index.html',
-  accessibility: existsSync(resolve(dirname(OUT), 'accessibility.html')) ? 'accessibility.html' : null,
 }).replace(/</g, '\\u003c')};
 ${SHELL_SCRIPT}
+${NAV_SCRIPT}
 
 function proofHtml(id) {
   const p = PROOFS[id];
@@ -313,18 +306,6 @@ document.addEventListener('click', (e) => {
   e.stopPropagation();
   openPop(chip, proofHtml(chip.dataset.proof));
 });
-
-(function headerLinks() {
-  const parts = ['<a class="ref-link" href="' + esc(META.dashboard) + '">&larr; Measured results dashboard</a>'];
-  if (META.accessibility) {
-    parts.push('<a class="ref-link" href="' + esc(META.accessibility) + '">Accessibility and test levels &rarr;</a>');
-  }
-  if (META.specUrl) {
-    parts.push('<a class="ref-link" href="' + esc(META.specUrl) + '" target="_blank" rel="noopener">' +
-               'The scenario that produced all of this &rarr;</a>');
-  }
-  document.getElementById('headerLinks').innerHTML = parts.join(' &nbsp;·&nbsp; ');
-})();
 
 (function fingerprint() {
   const bits = [META.proved + ' of ' + META.total + ' patterns proved on this run'];

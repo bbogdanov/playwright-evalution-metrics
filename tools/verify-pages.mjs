@@ -43,6 +43,74 @@ async function check(file, width, height, theme, tag) {
   return { ctx, page };
 }
 
+// Site bar, heading anchors, section list and phone menu - shared by every page.
+async function checkNav(page, tag, file, w, h, { toc }) {
+  const current = await page.locator('.site-nav a[aria-current="page"]').first().getAttribute('href');
+  if (current !== file) problems.push(`${tag}: site bar marks ${current} as current, expected ${file}`);
+  const hrefs = await page.locator('.site-nav a, #siteMenu a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
+  for (const want of ['index.html', 'accessibility.html', 'patterns.html']) {
+    if (!hrefs.includes(want)) problems.push(`${tag}: no site link to ${want} (${hrefs})`);
+  }
+
+  const heads = await page.locator('main h2').evaluateAll((hs) =>
+    hs.map((x) => ({ id: x.id || x.closest('section[id]')?.id || '', anchor: x.querySelector('.heading-anchor')?.getAttribute('href') })));
+  if (!heads.length) problems.push(`${tag}: no section headings found`);
+  const ids = heads.map((x) => x.id);
+  if (ids.some((id) => !id)) problems.push(`${tag}: a section heading has no id`);
+  if (new Set(ids).size !== ids.length) problems.push(`${tag}: duplicate section ids (${ids})`);
+  for (const x of heads) {
+    if (x.anchor !== '#' + x.id) problems.push(`${tag}: heading ${x.id} anchor is ${x.anchor}`);
+  }
+  const barBottom = await page.locator('.site-nav').evaluate((n) => n.getBoundingClientRect().bottom);
+
+  if (w >= 1280) {
+    const tocLinks = page.locator('.site-toc a');
+    const n = await tocLinks.count();
+    if (toc && n !== heads.length) problems.push(`${tag}: section list has ${n} entries for ${heads.length} headings`);
+    if (!toc && (await page.locator('.site-toc').isVisible())) problems.push(`${tag}: section list shown on a page without one`);
+    if (toc && n) {
+      // Jumping lands the heading below the sticky bar, and the list follows.
+      const mid = Math.floor(n / 2);
+      await tocLinks.nth(mid).click();
+      await page.waitForTimeout(250);
+      const top = await page.locator('#' + ids[mid]).evaluate((el) => el.getBoundingClientRect().top);
+      if (top < barBottom) problems.push(`${tag}: section ${ids[mid]} lands under the bar (${top.toFixed(0)} < ${barBottom.toFixed(0)})`);
+      const on = await page.locator('.site-toc a.is-current').getAttribute('href');
+      if (on !== '#' + ids[mid]) problems.push(`${tag}: section list highlights ${on} after jumping to #${ids[mid]}`);
+      // On a tall screen the last section never reaches the highlight line on its
+      // own; scrolled to the bottom, it must still be the one highlighted.
+      await page.setViewportSize({ width: w, height: 1600 });
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+      await page.waitForTimeout(250);
+      const last = await page.locator('.site-toc a.is-current').getAttribute('href');
+      if (last !== '#' + ids.at(-1)) problems.push(`${tag}: at the bottom the list highlights ${last}, expected #${ids.at(-1)}`);
+      await page.setViewportSize({ width: w, height: h });
+      if (!(await page.locator('.to-top').isVisible())) problems.push(`${tag}: back-to-top missing after scrolling`);
+      await page.locator('.to-top').click();
+      await page.waitForTimeout(150);
+      if ((await page.evaluate(() => scrollY)) > 0) problems.push(`${tag}: back-to-top did not scroll to the top`);
+    }
+  } else {
+    const btn = page.locator('.site-menu-btn');
+    if (!(await btn.isVisible())) { problems.push(`${tag}: no menu button on a narrow screen`); return; }
+    if (await page.locator('.site-pages').isVisible()) problems.push(`${tag}: page links still inline on a narrow screen`);
+    await btn.click();
+    const menu = page.locator('#siteMenu');
+    if (!(await menu.isVisible())) { problems.push(`${tag}: menu did not open`); return; }
+    const box = await menu.boundingBox();
+    if (box.x < 0 || box.x + box.width > w + 1 || box.y + box.height > h + 1) problems.push(`${tag}: menu off-screen ${JSON.stringify(box)}`);
+    const sections = await menu.locator('.site-menu-toc a').count();
+    if (sections !== heads.length) problems.push(`${tag}: menu lists ${sections} sections for ${heads.length} headings`);
+    await page.keyboard.press('Escape');
+    if (await menu.isVisible()) problems.push(`${tag}: Escape did not close the menu`);
+    await btn.click();
+    await menu.locator('.site-menu-toc a').last().click();
+    await page.waitForTimeout(250);
+    if (await menu.isVisible()) problems.push(`${tag}: menu stayed open after choosing a section`);
+    await page.evaluate(() => scrollTo(0, 0));
+  }
+}
+
 // --- accessibility page -----------------------------------------------------
 for (const [w, h, theme] of [[1280, 900, 'light'], [1280, 900, 'dark'], [390, 780, 'light']]) {
   const tag = `a11y ${w}x${h} ${theme}`;
@@ -52,10 +120,7 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [1280, 900, 'dark'], [390, 78
   const n = await cells.count();
   if (n !== 36) problems.push(`${tag}: ${n} cells, expected 36`);
 
-  const hrefs = await page.locator('#headerLinks a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
-  for (const want of ['index.html', 'patterns.html']) {
-    if (!hrefs.includes(want)) problems.push(`${tag}: no header link to ${want} (${hrefs})`);
-  }
+  await checkNav(page, tag, 'accessibility.html', w, h, { toc: false });
 
   // first, last, and one near the bottom edge so the flip-above path runs
   for (const i of [0, 20, n - 1]) {
@@ -65,8 +130,8 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [1280, 900, 'dark'], [390, 78
     const pop = page.locator('#pop');
     if (!(await pop.isVisible())) { problems.push(`${tag}: popover did not open on cell ${i}`); continue; }
     const box = await pop.boundingBox();
-    if (box.x < 0 || box.y < 0 || box.x + box.width > w + 1 || box.y + box.height > h + 1) {
-      problems.push(`${tag}: popover off-screen on cell ${i}: ${JSON.stringify(box)}`);
+    if (box.x < 0 || box.y < 48 || box.x + box.width > w + 1 || box.y + box.height > h + 1) {
+      problems.push(`${tag}: popover off-screen or under the bar on cell ${i}: ${JSON.stringify(box)}`);
     }
     const text = await pop.innerText();
     if (text.length < 80) problems.push(`${tag}: popover text too short on cell ${i}: ${text.length}`);
@@ -122,6 +187,27 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [1280, 900, 'dark'], [390, 78
     if (await pop.isVisible()) problems.push(`${tag}: popover survived its trigger leaving the viewport`);
   }
 
+  // A screen too short for the popover above or below its cell: it is pinned to
+  // the top of the free area, which starts under the sticky bar, not at 0.
+  if (w < 800) {
+    await page.setViewportSize({ width: w, height: 360 });
+    const cell = cells.nth(0);
+    await page.evaluate(() => {
+      const el = document.querySelector('button[data-cell]');
+      scrollBy(0, el.getBoundingClientRect().top - 170);
+    });
+    await cell.click();
+    const pop = page.locator('#pop');
+    const bar = await page.locator('.site-nav').evaluate((n) => n.getBoundingClientRect().bottom);
+    const box = await pop.boundingBox();
+    if (!box) problems.push(`${tag}: popover did not open on a short screen`);
+    else if (box.height <= 360 - 170 - 8 && box.height <= 170 - bar) {
+      problems.push(`${tag}: short-screen popover fits on one side (${box.height.toFixed(0)}px), test is vacuous`);
+    } else if (box.y < bar) problems.push(`${tag}: popover under the bar on a short screen (${box.y.toFixed(0)} < ${bar.toFixed(0)})`);
+    await page.keyboard.press('Escape');
+    await page.setViewportSize({ width: w, height: h });
+  }
+
   if (process.env.BM_SHOT && w === 1280) {
     await page.screenshot({ path: `${process.env.BM_SHOT}/accessibility-${theme}.png`, fullPage: true });
   }
@@ -132,6 +218,8 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [1280, 900, 'dark'], [390, 78
 for (const [w, h, theme] of [[1280, 900, 'light'], [390, 780, 'dark']]) {
   const tag = `patterns ${w}x${h} ${theme}`;
   const { ctx, page } = await check(`${out}/patterns.html`, w, h, theme, tag);
+
+  await checkNav(page, tag, 'patterns.html', w, h, { toc: true });
 
   const cards = page.locator('article.pattern');
   const n = await cards.count();
@@ -159,8 +247,8 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [390, 780, 'dark']]) {
     const pop = page.locator('#pop');
     if (!(await pop.isVisible())) { problems.push(`${tag}: proof ${i} did not open`); continue; }
     const box = await pop.boundingBox();
-    if (box.x < 0 || box.y < 0 || box.x + box.width > w + 1 || box.y + box.height > h + 1) {
-      problems.push(`${tag}: proof popover off-screen: ${JSON.stringify(box)}`);
+    if (box.x < 0 || box.y < 48 || box.x + box.width > w + 1 || box.y + box.height > h + 1) {
+      problems.push(`${tag}: proof popover off-screen or under the bar: ${JSON.stringify(box)}`);
     }
     if ((await pop.locator('.pop-row').count()) < 2) problems.push(`${tag}: proof ${i} has no figures`);
     await page.keyboard.press('Escape');
@@ -186,13 +274,20 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [390, 780, 'dark']]) {
   await term.click();
   if (!(await page.locator('#pop').isVisible())) problems.push(`${tag}: glossary popover did not open`);
   await page.keyboard.press('Escape');
-  const hrefs = await page.locator('#headerLinks a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
-  if (!hrefs.includes('accessibility.html')) problems.push(`${tag}: no link to the matrix page (${hrefs})`);
-  if (!hrefs.includes('patterns.html')) problems.push(`${tag}: no link to the patterns page (${hrefs})`);
+  await checkNav(page, tag, 'index.html', 1280, 900, { toc: true });
   // theme toggle still wired
   await page.locator('#themeToggle').click();
   const t = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
   if (t !== 'dark') problems.push(`${tag}: theme toggle did not flip (${t})`);
+  await ctx.close();
+}
+
+// The dashboard at phone width: the menu replaces the bar's links, and nothing
+// on the widest page may push the layout sideways.
+{
+  const tag = 'dashboard 390 dark';
+  const { ctx, page } = await check(`${out}/index.html`, 390, 780, 'dark', tag);
+  await checkNav(page, tag, 'index.html', 390, 780, { toc: true });
   await ctx.close();
 }
 
