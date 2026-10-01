@@ -48,6 +48,12 @@ export class BenchParams {
    */
   readonly fill = computed(() => clamp(this.num('fill', 200), 0, 60_000));
   readonly fields = computed(() => clamp(this.num('fields', 100), 1, 2000));
+  /**
+   * Nesting route only: stamp an addressable button and a test-id container on
+   * every level, so a target can be picked at any depth of one page. Off by
+   * default, which leaves the S12 page exactly as it was.
+   */
+  readonly levelTargets = computed(() => this.flag('levelTargets', false));
 
   // --- Render behaviour ----------------------------------------------------
   /** Mutation frequency in Hz for the churn route. 0 disables churn. */

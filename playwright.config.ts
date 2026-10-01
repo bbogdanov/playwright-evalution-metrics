@@ -102,6 +102,13 @@ export default defineConfig({
       use: { trace: 'retain-on-failure', video: 'off', screenshot: 'off' },
     },
     {
+      // S15: depth 50 at ~5,000 elements. Its records go to results/deep-raw and
+      // feed their own page, so running it alone cannot replace the main summary.
+      name: 'deep',
+      testDir: './e2e/deep',
+      use: { trace: 'off', video: 'off', screenshot: 'off' },
+    },
+    {
       name: 'robustness',
       testDir: './e2e/robustness',
       use: { trace: 'off', video: 'off', screenshot: 'off' },

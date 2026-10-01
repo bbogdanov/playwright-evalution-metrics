@@ -149,7 +149,19 @@ export const GLOSSARY = {
 
 
 /** `nav` is the site bar from page-shell's siteNav(), rendered by the caller, which knows the output directory. */
-export function renderHtml(summary, nav = '') {
+/**
+ * The results page, or - given `page` - a sibling page in the same frame.
+ *
+ * A sibling passes its own title, heading and client script, and gets this
+ * page's styles, helpers, header and glossary unchanged, so two pages read as one
+ * site rather than two projects that happen to share a nav bar.
+ */
+export function renderHtml(summary, nav = '', page = {}) {
+  const title = page.title ?? 'Locator Benchmark';
+  const heading = page.heading ?? 'Playwright locator strategies';
+  const sub = page.sub ??
+    'Measured against a controlled Angular application. Every strategy resolves the same physical element.';
+  const client = page.client ?? CLIENT_JS;
   const data = JSON.stringify(summary).replace(/</g, '\\u003c');
   const glossary = JSON.stringify(GLOSSARY).replace(/</g, '\\u003c');
   return `<!doctype html>
@@ -157,7 +169,7 @@ export function renderHtml(summary, nav = '') {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Locator Benchmark</title>
+<title>${title}</title>
 <style>
 :root {${tokenBlock('light')}
   --status-good: ${STATUS.good};
@@ -245,9 +257,9 @@ ${NAV_STYLES}
 ${nav}
 <main class="wrap" id="main" tabindex="-1">
   <header>
-    <h1>Playwright locator strategies</h1>
+    <h1>${heading}</h1>
     <p class="sub">
-      Measured against a controlled Angular application. Every strategy resolves the same physical element.
+      ${sub}
     </p>
   </header>
   <div id="fingerprint" class="fingerprint"></div>
@@ -260,7 +272,7 @@ ${nav}
 <script id="data" type="application/json">${data}</script>
 <script id="glossary" type="application/json">${glossary}</script>
 <script>
-${CLIENT_JS}
+${client}
 </script>
 </body>
 </html>`;
@@ -1274,3 +1286,18 @@ function tableView(sec, headers, rows, caption) {
 })();
 
 `;
+
+/** Everything the results page's script defines before its first section: helpers, popovers, the fingerprint. */
+export const CLIENT_PRELUDE = CLIENT_JS.slice(0, CLIENT_JS.indexOf('// --- stat tiles'));
+
+/**
+ * One section of the results page's script, by the name of its function, for a
+ * sibling page that shows the same view of its own data. Throws rather than
+ * returning nothing, so a renamed section breaks the build instead of a page.
+ */
+export function clientBlock(name) {
+  const start = CLIENT_JS.indexOf(`(function ${name}() {`);
+  const end = start < 0 ? -1 : CLIENT_JS.indexOf('\n})();', start);
+  if (start < 0 || end < 0) throw new Error(`No section "${name}" in the dashboard script`);
+  return CLIENT_JS.slice(start, end + '\n})();'.length);
+}

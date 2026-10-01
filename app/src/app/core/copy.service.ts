@@ -11,6 +11,7 @@ const EN: Dict = {
   open: 'Open', edit: 'Edit', remove: 'Remove', approve: 'Approve', submit: 'Submit',
   active: 'Active', pending: 'Pending', closed: 'Closed', blocked: 'Blocked',
   forRow: 'for row', rowLabel: 'Row', cellLabel: 'Cell',
+  leaf: 'Deep leaf at depth', level: 'Level marker',
 };
 
 const EN_REWORDED: Dict = {
@@ -20,6 +21,7 @@ const EN_REWORDED: Dict = {
   open: 'View', edit: 'Modify', remove: 'Delete', approve: 'Accept', submit: 'Send',
   active: 'In progress', pending: 'Awaiting review', closed: 'Completed', blocked: 'On hold',
   forRow: 'on line', rowLabel: 'Line', cellLabel: 'Field',
+  leaf: 'Innermost item at level', level: 'Tier marker',
 };
 
 const DE: Dict = {
@@ -29,6 +31,7 @@ const DE: Dict = {
   open: 'Öffnen', edit: 'Bearbeiten', remove: 'Entfernen', approve: 'Genehmigen', submit: 'Absenden',
   active: 'Aktiv', pending: 'Ausstehend', closed: 'Geschlossen', blocked: 'Blockiert',
   forRow: 'für Zeile', rowLabel: 'Zeile', cellLabel: 'Zelle',
+  leaf: 'Tiefes Blatt auf Ebene', level: 'Ebenenmarke',
 };
 
 /**

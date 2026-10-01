@@ -213,6 +213,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
  */
 const PAGES = [
   { id: 'results', file: 'index.html', label: 'Results' },
+  { id: 'deep', file: 'deep.html', label: 'Depth 50' },
   { id: 'accessibility', file: 'accessibility.html', label: 'Accessibility' },
   { id: 'patterns', file: 'patterns.html', label: 'Patterns' },
 ];

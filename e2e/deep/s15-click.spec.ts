@@ -1,0 +1,74 @@
+import { expect, test } from '../harness/fixtures';
+import { timeOnceSettled } from '../harness/measure';
+import { BY_ID } from '../locators/strategies';
+import { MACRO_SET } from '../macro/macro-set';
+import { DEEP, FILL, SHALLOW } from './shape';
+
+/**
+ * S15 click - what a whole action costs at depth 50, not just the query.
+ *
+ * A click is query + scroll into view + actionability checks + hit test +
+ * dispatch. Depth can touch every one of those, and query cost is only the
+ * first. Measured for the macro representatives, on the depth-50 page and on the
+ * shallow control with the same element count.
+ *
+ * The click is verified through the app's action log, so a click that landed on
+ * the wrong element cannot be timed as a success.
+ */
+
+test.use({ scenario: 'S15' });
+
+const REPS = 15;
+
+for (const depth of [SHALLOW, DEEP]) {
+  test(`S15 click | depth=${depth} at ~${FILL} elements`, async ({ bench, page }) => {
+    const state = await bench.goto('deep', { depth, fill: FILL });
+    const target = await bench.describe(`leaf-r${depth}`);
+    expect(target.found).toBe(true);
+    const logged = page.getByTestId('status.last-clicked.value');
+
+    for (const id of MACRO_SET) {
+      const strategy = BY_ID.get(id)!;
+      if (!strategy.applicable(target)) continue;
+      const locator = strategy.build(page, target);
+
+      // One unrecorded click absorbs selector-engine injection and the first
+      // scroll, which would otherwise land on whichever strategy ran first.
+      await locator.click({ timeout: 30_000 });
+
+      const samples: number[] = [];
+      let error: string | null = null;
+      for (let i = 0; i < REPS; i++) {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        const r = await timeOnceSettled(() => locator.click({ timeout: 30_000 }));
+        if (!r.ok) { error = r.error; break; }
+        samples.push(r.ms);
+      }
+
+      // Proof the locator lands on the leaf: point the log elsewhere, click once
+      // more outside the timing, and read it back.
+      await page.locator('.bm-filler-btn').first().click();
+      await locator.click({ timeout: 30_000 });
+      const landed = (await logged.textContent())?.trim() === 'deep-leaf';
+
+      bench.emitRaw({
+        strategyId: id,
+        family: strategy.family,
+        metric: 'action_click_ms',
+        samples,
+        target,
+        ok: error === null && landed,
+        error: error ?? (landed ? null : 'click did not reach the leaf'),
+        dims: {
+          part: 'click',
+          requestedDepth: depth,
+          fill: FILL,
+          domNodes: state.domNodes,
+          // Every repetition starts scrolled to the top, so each one pays the
+          // scroll into view that a test reaching this element would pay.
+          scrolledFromTop: true,
+        },
+      });
+    }
+  });
+}

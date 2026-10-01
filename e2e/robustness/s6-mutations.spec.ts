@@ -1,8 +1,7 @@
-import type { Page } from '@playwright/test';
 import { test } from '../harness/fixtures';
-import { applicable, type Strategy } from '../locators/strategies';
-import type { TargetDescriptor } from '../locators/describe';
+import { applicable } from '../locators/strategies';
 import { ALL_MUTATIONS } from './mutations';
+import { outcomeFor, type Outcome } from './outcome';
 
 /**
  * S6 - robustness under change.
@@ -23,48 +22,14 @@ import { ALL_MUTATIONS } from './mutations';
  * that descriptor, then apply the mutation and ask whether each locator still
  * reaches the same physical element.
  *
- * Identity is verified through data-qa, which is derived only from the target's
- * logical coordinates and is therefore invariant under every mutation. Counting
- * matches alone would score a locator as surviving when it had silently latched
- * onto a different element — which is worse than breaking, because it passes.
+ * Identity is verified through data-qa; see ./outcome.ts.
  */
 
 test.use({ scenario: 'S6' });
 
-type Outcome =
-  /** Resolves to exactly the intended element. */
-  | 'survived'
-  /** Resolves to nothing: loud, immediate, cheap to diagnose. */
-  | 'broken-none'
-  /** Resolves to several elements: strict mode turns this into a failure. */
-  | 'broken-ambiguous'
-  /** Resolves to exactly one element, and it is the wrong one. Silent and worst. */
-  | 'broken-wrong'
-  /** The locator could not even be constructed against the mutated page. */
-  | 'error';
-
 const ROWS = 120;
 const COLS = 6;
 const TARGET_ROW = 60;
-
-async function outcomeFor(
-  page: Page,
-  strategy: Strategy,
-  target: TargetDescriptor,
-): Promise<{ outcome: Outcome; matches: number; detail: string }> {
-  try {
-    const locator = strategy.build(page, target);
-    const matches = await locator.count();
-    if (matches === 0) return { outcome: 'broken-none', matches, detail: '' };
-    if (matches > 1) return { outcome: 'broken-ambiguous', matches, detail: '' };
-    const qa = await locator.first().getAttribute('data-qa');
-    return qa === target.qaId
-      ? { outcome: 'survived', matches, detail: '' }
-      : { outcome: 'broken-wrong', matches, detail: `resolved data-qa=${qa}` };
-  } catch (e) {
-    return { outcome: 'error', matches: -1, detail: (e as Error).message.split('\n')[0] };
-  }
-}
 
 for (const mutation of ALL_MUTATIONS) {
   test(`S6 robustness | mutate=${mutation}`, async ({ bench, page }) => {

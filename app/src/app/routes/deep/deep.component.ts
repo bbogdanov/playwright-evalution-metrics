@@ -5,7 +5,7 @@ import { ActionLog } from '../../core/action-log.service';
 import { NestComponent } from './nest.component';
 
 /**
- * Nesting-depth surface for S1/S2.
+ * Nesting-depth surface for S12 and S15.
  *
  * Depth is the variable that separates locator families that care about ancestry
  * (structural CSS chains, absolute XPath, chained .locator() calls) from those
@@ -52,7 +52,10 @@ export class DeepComponent {
   );
 
   private readonly token = computed(() =>
-    ['deep', this.depth(), this.params.fill(), [...this.params.mutations()].sort().join('+')].join(':'),
+    [
+      'deep', this.depth(), this.params.fill(), this.params.levelTargets() ? 'lt' : '',
+      [...this.params.mutations()].sort().join('+'),
+    ].join(':'),
   );
 
   private readonly publishReady = afterRenderEffect(() => this.ready.set(this.token()));

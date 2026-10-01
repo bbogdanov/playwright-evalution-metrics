@@ -2,7 +2,7 @@ import { execSync } from 'node:child_process';
 import { cpus, freemem, loadavg, totalmem, platform, release } from 'node:os';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { RESULTS_DIR, RUN_ID } from './paths';
+import { DEEP_RESULTS_DIR, RESULTS_DIR, RUN_ID } from './paths';
 
 /**
  * Machine and toolchain fingerprint, written once per run.
@@ -95,7 +95,14 @@ export function captureEnv(opts: {
   };
 }
 
+/**
+ * Written to every raw stream directory, because which scenarios a run will
+ * reach is not known here. The analysis matches environments to records by run
+ * id, so a fingerprint for a run that wrote nothing to a directory is ignored.
+ */
 export function writeEnv(env: RunEnv): void {
-  mkdirSync(RESULTS_DIR, { recursive: true });
-  writeFileSync(join(RESULTS_DIR, `env-${env.runId}.json`), JSON.stringify(env, null, 2));
+  for (const dir of new Set([RESULTS_DIR, DEEP_RESULTS_DIR])) {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, `env-${env.runId}.json`), JSON.stringify(env, null, 2));
+  }
 }
