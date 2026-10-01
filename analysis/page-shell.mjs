@@ -95,6 +95,9 @@ export const SHELL_STYLES = `
   font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 4px;
 }
 #pop .pop-close:hover { color: var(--text-primary); }
+#pop .pop-source { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--grid); font-size: 12px; }
+#pop .pop-source .ref-link { font-size: 12px; }
+#pop .pop-source code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-secondary); overflow-wrap: anywhere; }
 .ref-link {
   font-size: 12.5px;
   color: var(--series-1);

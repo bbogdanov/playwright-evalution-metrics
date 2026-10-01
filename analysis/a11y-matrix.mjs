@@ -301,3 +301,87 @@ export const ROWS = [
     },
   },
 ];
+
+/**
+ * Where the evidence quoted in each cell was measured.
+ *
+ * `find` is the start of the test (or block) in `spec`; the page resolves it to a
+ * line range at build time and the build fails if it stops matching. `page`
+ * sources point at a proof on another generated page instead.
+ */
+export const SOURCES = {
+  s1: {
+    spec: 'e2e/micro/s1-dom-size.spec.ts', find: 'test(`S1 query cost',
+    what: 'S1: query cost at four DOM sizes, one target addressed every way',
+  },
+  s1mechanism: {
+    spec: 'e2e/micro/s1-dom-size.spec.ts', find: "if (tier.name === 's') {",
+    what: 'S1: forced style-and-layout passes per candidate, counted from a Chrome trace',
+  },
+  s2scope: {
+    spec: 'e2e/micro/s2-position.spec.ts', find: "test('S2 scoping",
+    what: 'S2: the same element, container-scoped against document-wide',
+  },
+  s3click: {
+    spec: 'e2e/macro/s3-churn.spec.ts', find: 'test(`S3 churn',
+    what: 'S3, hz=0 cell: the cost of a click on a quiet page',
+  },
+  s6: {
+    spec: 'e2e/robustness/s6-mutations.spec.ts', find: 'test(`S6 robustness',
+    what: 'S6: which locators survive reworded copy, another locale, reordering and renamed classes',
+  },
+  s13blind: {
+    spec: 'e2e/a11y/s13-accessibility.spec.ts', find: "test('S13 blindness",
+    what: 'S13: test ids keep resolving through each defect, role and label locators stop',
+  },
+  s13axe: {
+    spec: 'e2e/a11y/s13-accessibility.spec.ts', find: 'test(`S13 axe scan',
+    what: 'S13: axe scan of the defective and corrected page, with its duration',
+  },
+  'pattern.scope.role': { page: 'patterns.html#scope.role', what: 'Patterns: scoping a role query, paired measurement' },
+  'pattern.scope.chain': { page: 'patterns.html#scope.chain', what: 'Patterns: chaining from a unique root against a broad one' },
+  'pattern.scope.filter': { page: 'patterns.html#scope.filter', what: 'Patterns: filtering a narrow set against addressing directly' },
+};
+
+/**
+ * Sources per cell, keyed `row|level`. An empty list is a statement, not a gap:
+ * that verdict rests on judgement alone, and the page says so.
+ */
+export const CELL_PROOF = {
+  'role.name|unit': ['s1', 's13blind'],
+  'role.name|integration': ['s1', 's3click'],
+  'role.name|smoke': ['s1', 's3click'],
+  'role.name|e2e': ['s1', 's2scope', 'pattern.scope.role'],
+  'label|unit': ['s13blind'],
+  'label|integration': ['s13blind'],
+  'label|smoke': [],
+  'label|e2e': [],
+  'text.exact|unit': [],
+  'text.exact|integration': ['s1'],
+  'text.exact|smoke': ['s6'],
+  'text.exact|e2e': ['s1', 's6'],
+  'role.bare|unit': ['s6'],
+  'role.bare|integration': ['s6'],
+  'role.bare|smoke': ['s1', 's6'],
+  'role.bare|e2e': ['s1'],
+  'filter.hasText|unit': ['s1'],
+  'filter.hasText|integration': ['s1'],
+  'filter.hasText|smoke': ['s1'],
+  'filter.hasText|e2e': ['s1', 'pattern.scope.filter'],
+  'visible|unit': ['s1mechanism'],
+  'visible|integration': [],
+  'visible|smoke': ['s1mechanism'],
+  'visible|e2e': ['s1', 's1mechanism'],
+  'chained|unit': ['s1'],
+  'chained|integration': ['s1', 'pattern.scope.chain'],
+  'chained|smoke': ['s1', 'pattern.scope.chain'],
+  'chained|e2e': ['s1'],
+  'testid|unit': ['s13blind'],
+  'testid|integration': ['s2scope'],
+  'testid|smoke': ['s1', 's6'],
+  'testid|e2e': ['s1'],
+  'axe|unit': ['s13axe'],
+  'axe|integration': ['s13axe'],
+  'axe|smoke': ['s13axe'],
+  'axe|e2e': ['s13axe'],
+};

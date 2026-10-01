@@ -257,9 +257,6 @@ h2 { font-size: 17px; margin: 40px 0 6px; letter-spacing: -0.005em; }
 #pop .pop-row .k { color: var(--text-secondary); }
 #pop .pop-row .v { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; text-align: right; }
 #pop .pop-note { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
-#pop .pop-source { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--grid); font-size: 12px; }
-#pop .pop-source .ref-link { font-size: 12px; }
-#pop .pop-source code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-secondary); overflow-wrap: anywhere; }
 ${HIGHLIGHT_STYLES}${SHELL_STYLES}
 ${NAV_STYLES}
 @media (max-width: 760px) {

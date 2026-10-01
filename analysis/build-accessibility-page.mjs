@@ -16,8 +16,10 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { STATUS } from './palette.mjs';
 import { tokenBlock, SHELL_STYLES, SHELL_SCRIPT, NAV_STYLES, NAV_SCRIPT, siteNav } from './page-shell.mjs';
-import { LEVELS, ROWS, MEASURED } from './a11y-matrix.mjs';
+import { LEVELS, ROWS, MEASURED, SOURCES, CELL_PROOF } from './a11y-matrix.mjs';
 import { blobUrl } from './repo-link.mjs';
+import { sourceRef } from './proof-source.mjs';
+import { highlightTs, tokenVars, HIGHLIGHT_STYLES } from './highlight.mjs';
 
 const OUT = resolve(process.env.BM_A11Y_PAGE ?? 'results/dashboard/accessibility.html');
 const DOC_URL = blobUrl('docs/ACCESSIBILITY-AND-TEST-LEVELS.md');
@@ -30,18 +32,43 @@ const esc = (s) =>
  * into data- attributes: the reasoning runs to a paragraph and a code sample,
  * and escaping that twice through HTML attributes is how quotes get mangled.
  */
+/** Each source resolved once to what the popover shows: a line in a spec, or a proof on another page. */
+const SOURCE_REFS = Object.fromEntries(
+  Object.entries(SOURCES).map(([id, s]) => [
+    id,
+    s.page
+      ? { what: s.what, label: s.page, href: s.page, external: false }
+      : { what: s.what, ...sourceRef(s.spec, s.find), external: true },
+  ]),
+);
+
 const CELLS = {};
+const unmapped = [];
 for (const row of ROWS) {
   for (const level of LEVELS) {
     const cell = row.cells[level.id];
     if (!cell) continue;
-    CELLS[`${row.id}|${level.id}`] = {
+    const key = `${row.id}|${level.id}`;
+    const proof = CELL_PROOF[key];
+    if (!proof) unmapped.push(key);
+    CELLS[key] = {
       title: `${row.label} — ${level.title}`,
       verdict: cell.verdict,
       why: cell.why,
-      example: cell.example,
+      // Highlighted here rather than in the browser: highlightTs escapes as it goes,
+      // so this is safe to insert as HTML.
+      example: cell.example ? highlightTs(cell.example) : '',
+      sources: (proof ?? []).map((id) => {
+        if (!SOURCE_REFS[id]) throw new Error(`${key}: unknown source '${id}'`);
+        return SOURCE_REFS[id];
+      }),
     };
   }
+}
+// Every cell must say what it rests on, even if the answer is "judgement".
+if (unmapped.length) {
+  console.error(`No CELL_PROOF entry for: ${unmapped.join(', ')}`);
+  process.exit(1);
 }
 
 const VERDICT = {
@@ -92,17 +119,17 @@ const html = `<!doctype html>
   --status-good: ${STATUS.good};
   --status-critical: ${STATUS.critical};
   --yes-bg: rgba(12,163,12,0.10);
-  --no-bg: rgba(208,59,59,0.10);
+  --no-bg: rgba(208,59,59,0.10);${tokenVars('light')}
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {${tokenBlock('dark')}
     --yes-bg: rgba(12,163,12,0.16);
-    --no-bg: rgba(208,59,59,0.16);
+    --no-bg: rgba(208,59,59,0.16);${tokenVars('dark').replace(/\n/g, '\n  ')}
   }
 }
 :root[data-theme="dark"] {${tokenBlock('dark')}
   --yes-bg: rgba(12,163,12,0.16);
-  --no-bg: rgba(208,59,59,0.16);
+  --no-bg: rgba(208,59,59,0.16);${tokenVars('dark')}
 }
 
 * { box-sizing: border-box; }
@@ -194,7 +221,11 @@ td.cell { width: 17.5%; }
 #pop .pop-verdict { font-weight: 600; margin-bottom: 4px; }
 #pop .pop-verdict.v-yes { color: ${STATUS.good}; }
 #pop .pop-verdict.v-no { color: ${STATUS.critical}; }
-${SHELL_STYLES}
+#pop .pop-source ul { list-style: none; margin: 4px 0 0; padding: 0; }
+#pop .pop-source li { margin: 0 0 6px; }
+#pop .pop-source li:last-child { margin-bottom: 0; }
+#pop .pop-source.judgement { color: var(--text-muted); }
+${HIGHLIGHT_STYLES}${SHELL_STYLES}
 ${NAV_STYLES}
 @media (max-width: 900px) { .levels { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) {
@@ -287,7 +318,24 @@ function cellHtml(key) {
   return '<div class="pop-term">' + esc(c.title) + '</div>' +
     '<div class="pop-verdict v-' + esc(c.verdict) + '">' + label + '</div>' +
     '<div class="pop-short">' + esc(c.why) + '</div>' +
-    (c.example ? '<pre>' + esc(c.example) + '</pre>' : '');
+    (c.example ? '<pre><code>' + c.example + '</code></pre>' : '') +
+    sourcesHtml(c.sources);
+}
+
+// What the cell's figures were measured by. No sources means the verdict is
+// judgement, and the popover says that rather than showing nothing.
+function sourcesHtml(sources) {
+  if (!sources.length) {
+    return '<div class="pop-source judgement">No measurement behind this verdict: it is judgement.</div>';
+  }
+  const items = sources.map((s) => {
+    const attrs = s.external ? ' target="_blank" rel="noopener"' : '';
+    const link = s.href
+      ? '<a class="ref-link" href="' + esc(s.href) + '"' + attrs + '>' + esc(s.what) + ' &rarr;</a>'
+      : esc(s.what);
+    return '<li>' + link + '<br><code>' + esc(s.label) + '</code></li>';
+  }).join('');
+  return '<div class="pop-source">See the proof:<ul>' + items + '</ul></div>';
 }
 
 document.addEventListener('click', (e) => {

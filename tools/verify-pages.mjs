@@ -136,6 +136,13 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [1280, 900, 'dark'], [390, 78
     const text = await pop.innerText();
     if (text.length < 80) problems.push(`${tag}: popover text too short on cell ${i}: ${text.length}`);
     if (!(await pop.locator('pre').count())) problems.push(`${tag}: no example on cell ${i}`);
+    if (!(await pop.locator('pre .tok-k, pre .tok-f, pre .tok-s').count())) problems.push(`${tag}: example not highlighted on cell ${i}`);
+    // Every cell names what it rests on: a source per measurement, or an explicit "judgement".
+    const sources = pop.locator('.pop-source');
+    if (!(await sources.count())) problems.push(`${tag}: cell ${i} does not say what its verdict rests on`);
+    for (const href of await sources.locator('a').evaluateAll((as) => as.map((a) => a.getAttribute('href')))) {
+      if (!/\.spec\.ts#L\d+-L\d+$|^patterns\.html#[\w.-]+$/.test(href)) problems.push(`${tag}: cell ${i} links to ${href}`);
+    }
     await page.keyboard.press('Escape');
     if (await pop.isVisible()) problems.push(`${tag}: Escape did not close popover`);
   }
