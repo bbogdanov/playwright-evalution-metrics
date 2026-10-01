@@ -2,7 +2,7 @@ import { expect, test } from '../harness/fixtures';
 import { timeOnceSettled } from '../harness/measure';
 import { BY_ID } from '../locators/strategies';
 import { MACRO_SET } from '../macro/macro-set';
-import { DEEP, FILL, SHALLOW } from './shape';
+import { DEEP, FILLERS, SHALLOW, fillFor } from './shape';
 
 /**
  * S15 click - what a whole action costs at depth 50, not just the query.
@@ -21,8 +21,8 @@ test.use({ scenario: 'S15' });
 const REPS = 15;
 
 for (const depth of [SHALLOW, DEEP]) {
-  test(`S15 click | depth=${depth} at ~${FILL} elements`, async ({ bench, page }) => {
-    const state = await bench.goto('deep', { depth, fill: FILL });
+  test(`S15 click | depth=${depth} with ${FILLERS} fillers`, async ({ bench, page }) => {
+    const state = await bench.goto('deep', { depth, fill: fillFor(depth) });
     const target = await bench.describe(`leaf-r${depth}`);
     expect(target.found).toBe(true);
     const logged = page.getByTestId('status.last-clicked.value');
@@ -47,9 +47,14 @@ for (const depth of [SHALLOW, DEEP]) {
 
       // Proof the locator lands on the leaf: point the log elsewhere, click once
       // more outside the timing, and read it back.
+      // The log is a signal rendered on the next change-detection pass, so it is
+      // awaited rather than read: reading it straight after the click sees the
+      // filler's entry and reports a good click as a miss.
       await page.locator('.bm-filler-btn').first().click();
+      await expect(logged).not.toHaveText('deep-leaf');
       await locator.click({ timeout: 30_000 });
-      const landed = (await logged.textContent())?.trim() === 'deep-leaf';
+      const landed = await expect(logged).toHaveText('deep-leaf', { timeout: 5_000 })
+        .then(() => true, () => false);
 
       bench.emitRaw({
         strategyId: id,
@@ -62,7 +67,8 @@ for (const depth of [SHALLOW, DEEP]) {
         dims: {
           part: 'click',
           requestedDepth: depth,
-          fill: FILL,
+          fill: fillFor(depth),
+          fillers: FILLERS,
           domNodes: state.domNodes,
           // Every repetition starts scrolled to the top, so each one pays the
           // scroll into view that a test reaching this element would pay.

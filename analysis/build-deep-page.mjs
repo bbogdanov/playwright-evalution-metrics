@@ -43,7 +43,7 @@ const VERDICT = {
   same: { label: 'no measurable difference', role: 'muted' },
 };
 function verdictOf(x) {
-  if (!x || !x.significant || x.belowNoiseFloor) return 'same';
+  if (!x || !x.significant || x.belowNoiseFloor || x.withinDrift) return 'same';
   return x.medianDelta > 0 ? 'slower' : 'faster';
 }
 function specLink(p) {
@@ -110,7 +110,7 @@ function logAxis(lo, hi) {
   const sec = section(
     'Every strategy at depth 50, against the same page five levels deep',
     'One dot pair per strategy. Both pages carry the same number of elements; only the [[depth|nesting]] differs, so the gap between the two dots is what depth costs that locator. [[median|Median]] net query cost, [[log-scale|log scale]]. The shaded band is the [[noise-floor|measurement floor]]: anything inside it is as fast as anything this harness can measure. ' +
-    'A gap is called a difference only when it clears the floor <em>and</em> the [[p-value|significance test]]; otherwise it is labelled as none, however it looks.' + specLink('query')
+    'A gap is called a difference only when it clears the floor, the [[p-value|significance test]], <em>and</em> the drift of <code>id.css</code> between the two pages — the two are measured minutes apart, and a shift the reference locator shows too is the run moving, not depth. Otherwise it is labelled as none, however it looks.' + specLink('query')
   );
 
   const ctl = document.createElement('div');
@@ -173,7 +173,8 @@ function logAxis(lo, hi) {
         '<b>' + esc(x.strategyId) + '</b> <span class="m">· ' + esc(x.family) + '</span><br>' +
         '<span class="m">depth 5: ' + fmtMs(x.shallow.median) + ' (p95 ' + fmtMs(x.shallow.p95) + ', n=' + x.shallow.n + (x.shallow.probeOnly ? ', single probe' : '') + ')</span><br>' +
         '<span class="m">depth 50: ' + fmtMs(x.deep.median) + ' (p95 ' + fmtMs(x.deep.p95) + ', n=' + x.deep.n + (x.deep.probeOnly ? ', single probe' : '') + ')</span><br>' +
-        '<span class="m">' + esc(VERDICT[v].label) + (Number.isFinite(x.p) ? ' · p=' + x.p.toExponential(1) : '') + ' · floor ' + fmtMs(x.noiseFloor) + '</span>'
+        '<span class="m">' + esc(VERDICT[v].label) + (Number.isFinite(x.p) ? ' · p=' + x.p.toExponential(1) : '') + ' · floor ' + fmtMs(x.noiseFloor) +
+        (Number.isFinite(x.drift) ? ' · id.css drift ' + fmtMs(x.drift) : '') + '</span>'
       );
       svg.appendChild(g);
     });
@@ -209,17 +210,20 @@ function logAxis(lo, hi) {
   const levels = [...new Set(cells.map((c) => c.dims.level))].sort((a, b) => a - b);
   const by = {};
   for (const c of cells) (by[c.strategyId] ??= {})[c.dims.level] = c;
+  // Only locators unique at every level are drawn: a cost for 17 matches is not
+  // the cost of finding the target. The table keeps them, with their counts.
   const complete = Object.keys(by).filter((id) => levels.every((l) => by[id][l]));
+  const unique = complete.filter((id) => levels.every((l) => by[id][l].matches === 1));
   const peak = (id) => Math.max(...levels.map((l) => by[id][l].stats.median));
   const ranked = complete.sort((a, b) => peak(b) - peak(a));
-  const picks = ranked.slice(0, 6);
+  const picks = unique.sort((a, b) => peak(b) - peak(a)).slice(0, 6);
   if (!picks.includes('testid.api') && by['testid.api']) picks.push('testid.api');
   const nodes = cells[0].domNodes;
 
   const sec = section(
     'One depth-50 page, the target moved from top to bottom',
     'The page stays fixed — ' + nodes.toLocaleString() + ' elements, 50 levels — and only the level holding the target changes. Each level carries one addressable marker button, so the target is always the same kind of element. ' +
-    'A flat line means the strategy does not care where on the page its target is. The six strategies with the highest cost anywhere on the page are drawn, plus <code>testid.api</code> as the reference; the table has every strategy.' + specLink('level')
+    'A flat line means the strategy does not care where on the page its target is. Drawn: the six costliest strategies that resolve to exactly one element at every level, plus <code>testid.api</code> as the reference. The table has every strategy, with match counts — the level markers share a class, so bare class locators are ambiguous here by design.' + specLink('level')
   );
 
   const vals = picks.flatMap((id) => levels.map((l) => by[id][l].stats.median)).filter((v) => v > 0);

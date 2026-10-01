@@ -1,6 +1,6 @@
 import { expect, test } from '../harness/fixtures';
 import { applicable } from '../locators/strategies';
-import { DEEP, FILL, SHALLOW } from './shape';
+import { DEEP, FILLERS, SHALLOW, fillFor } from './shape';
 
 /**
  * S15 query - what every strategy costs at depth 50 and ~5,000 elements.
@@ -18,8 +18,8 @@ import { DEEP, FILL, SHALLOW } from './shape';
 test.use({ scenario: 'S15' });
 
 for (const depth of [SHALLOW, DEEP]) {
-  test(`S15 query | depth=${depth} at ~${FILL} elements`, async ({ bench }) => {
-    const state = await bench.goto('deep', { depth, fill: FILL });
+  test(`S15 query | depth=${depth} with ${FILLERS} fillers`, async ({ bench }) => {
+    const state = await bench.goto('deep', { depth, fill: fillFor(depth) });
 
     const target = await bench.describe(`leaf-r${depth}`);
     expect(target.found).toBe(true);
@@ -28,7 +28,8 @@ for (const depth of [SHALLOW, DEEP]) {
     const dims = {
       part: 'query',
       requestedDepth: depth,
-      fill: FILL,
+      fill: fillFor(depth),
+      fillers: FILLERS,
       domNodes: state.domNodes,
       renderMs: state.renderMs ?? -1,
     };

@@ -489,6 +489,7 @@ function main() {
       const floor = Math.max(deep.noiseFloor ?? 0, shallow.noiseFloor ?? 0);
       const cmp = compare(rebuildSeries(records, deep), rebuildSeries(records, shallow), floor);
       depthContrast.push({
+        drift: null,
         part: deep.dims.part,
         metric: deep.metric,
         strategyId: deep.strategyId,
@@ -500,6 +501,19 @@ function main() {
         noiseFloor: floor,
         ...cmp,
       });
+    }
+
+    // The two pages are measured in separate tests, minutes apart, and the
+    // paired baseline only cancels what the baseline query itself pays. The
+    // reference locator does the same trivial work on both pages, so whatever
+    // it moved by is run drift, not depth - measured at 1.6 ms for first-match
+    // resolution on the first run of this scenario, where every cheap locator
+    // then read as "faster when deep". A difference no larger than the
+    // reference's own shift is not attributed to depth.
+    for (const x of depthContrast) {
+      const ref = depthContrast.find((r) => r.strategyId === REFERENCE && r.metric === x.metric && r.part === x.part);
+      x.drift = ref ? Math.abs(ref.medianDelta) : null;
+      x.withinDrift = x.drift !== null && x.strategyId !== REFERENCE && Math.abs(x.medianDelta) <= x.drift + x.noiseFloor;
     }
   }
 
