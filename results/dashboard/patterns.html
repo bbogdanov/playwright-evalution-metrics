@@ -40,6 +40,12 @@
   --status-critical: #d03b3b;
   --do-bg: rgba(12,163,12,0.07);
   --dont-bg: rgba(208,59,59,0.07);
+  --tok-c: #636c76;
+  --tok-k: #8250df;
+  --tok-s: #116329;
+  --tok-n: #0550ae;
+  --tok-f: #953800;
+  --tok-t: #0550ae;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -75,6 +81,12 @@
     --seq-12: #0d366b;
     --do-bg: rgba(12,163,12,0.12);
     --dont-bg: rgba(208,59,59,0.12);
+    --tok-c: #8b949e;
+    --tok-k: #d2a8ff;
+    --tok-s: #7ee787;
+    --tok-n: #79c0ff;
+    --tok-f: #ffa657;
+    --tok-t: #79c0ff;
   }
 }
 :root[data-theme="dark"] {
@@ -110,6 +122,12 @@
     --seq-12: #0d366b;
   --do-bg: rgba(12,163,12,0.12);
   --dont-bg: rgba(208,59,59,0.12);
+  --tok-c: #8b949e;
+  --tok-k: #d2a8ff;
+  --tok-s: #7ee787;
+  --tok-n: #79c0ff;
+  --tok-f: #ffa657;
+  --tok-t: #79c0ff;
 }
 
 * { box-sizing: border-box; }
@@ -204,6 +222,16 @@ h2 { font-size: 17px; margin: 40px 0 6px; letter-spacing: -0.005em; }
 #pop .pop-row .k { color: var(--text-secondary); }
 #pop .pop-row .v { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; text-align: right; }
 #pop .pop-note { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+#pop .pop-source { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--grid); font-size: 12px; }
+#pop .pop-source .ref-link { font-size: 12px; }
+#pop .pop-source code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-secondary); overflow-wrap: anywhere; }
+
+.tok-c { color: var(--tok-c); font-style: italic; }
+.tok-k { color: var(--tok-k); }
+.tok-s { color: var(--tok-s); }
+.tok-n { color: var(--tok-n); }
+.tok-f { color: var(--tok-f); }
+.tok-t { color: var(--tok-t); }
 
 .term {
   font: inherit;
@@ -387,35 +415,35 @@ h2:hover .heading-anchor, .heading-anchor:focus-visible { opacity: 1; }
       fixture, and the page object hands out locators rather than elements - which is itself the first pattern.
     </p>
     <div class="setup-code">
-      <pre><code>/** Production-ish page: ~30,000 elements, matching S1's `m` tier. */
-const BIG = { rows: 1_500, cols: 6, seed: 'bm-v1' } as const;
-const BIG_ROW = 750;
-const BIG_COL = 2;
-/** Column 2's accessible name on that row, stamped by the target directive. */
-const BIG_NAME = `Status for row ${BIG_ROW}`;</code></pre>
-      <pre><code>class GridPage {
-  constructor(private readonly page: Page) {}
+      <pre><code><span class="tok-c">/** Production-ish page: ~30,000 elements, matching S1's `m` tier. */</span>
+<span class="tok-k">const</span> BIG = { rows: <span class="tok-n">1_500</span>, cols: <span class="tok-n">6</span>, seed: <span class="tok-s">'bm-v1'</span> } <span class="tok-k">as</span> <span class="tok-k">const</span>;
+<span class="tok-k">const</span> BIG_ROW = <span class="tok-n">750</span>;
+<span class="tok-k">const</span> BIG_COL = <span class="tok-n">2</span>;
+<span class="tok-c">/** Column 2's accessible name on that row, stamped by the target directive. */</span>
+<span class="tok-k">const</span> BIG_NAME = <span class="tok-s">`Status for row ${</span>BIG_ROW<span class="tok-s">}</span><span class="tok-s">`</span>;</code></pre>
+      <pre><code><span class="tok-k">class</span> <span class="tok-t">GridPage</span> {
+  <span class="tok-k">constructor</span>(<span class="tok-k">private</span> <span class="tok-k">readonly</span> page: <span class="tok-t">Page</span>) {}
 
-  /** A uniquely addressable container. Everything else is scoped through it. */
-  row(r: number): Locator {
-    return this.page.getByTestId(`row.${r}`);
+  <span class="tok-c">/** A uniquely addressable container. Everything else is scoped through it. */</span>
+  <span class="tok-f">row</span>(r: <span class="tok-t">number</span>): <span class="tok-t">Locator</span> {
+    <span class="tok-k">return</span> <span class="tok-k">this</span>.page.<span class="tok-f">getByTestId</span>(<span class="tok-s">`row.${</span>r<span class="tok-s">}</span><span class="tok-s">`</span>);
   }
 
-  /** Deliberately takes a root: the caller decides what this is scoped to. */
-  cellByName(root: Locator, name: string): Locator {
-    return root.getByRole('button', { name, exact: true });
+  <span class="tok-c">/** Deliberately takes a root: the caller decides what this is scoped to. */</span>
+  <span class="tok-f">cellByName</span>(root: <span class="tok-t">Locator</span>, name: <span class="tok-t">string</span>): <span class="tok-t">Locator</span> {
+    <span class="tok-k">return</span> root.<span class="tok-f">getByRole</span>(<span class="tok-s">'button'</span>, { name, exact: <span class="tok-k">true</span> });
   }
 }
 
-/**
+<span class="tok-c">/**
  * A fixture that hands the test a page object rather than a resolved element.
  *
  * The fixture never awaits anything about the DOM, so it cannot bake in a state
  * that has already changed by the time the test body runs.
- */
-const test = base.extend&lt;{ grid: GridPage }&gt;({
-  grid: async ({ page }, use) =&gt; {
-    await use(new GridPage(page));
+ */</span>
+<span class="tok-k">const</span> test = base.<span class="tok-f">extend</span>&lt;{ grid: <span class="tok-t">GridPage</span> }&gt;({
+  grid: <span class="tok-k">async</span> ({ page }, use) =&gt; {
+    <span class="tok-k">await</span> <span class="tok-f">use</span>(<span class="tok-k">new</span> <span class="tok-t">GridPage</span>(page));
   },
 });</code></pre>
     </div>
@@ -434,13 +462,13 @@ const test = base.extend&lt;{ grid: GridPage }&gt;({
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// A fixture that resolves the element and hands back the handle.
-const handle = await page.getByTestId('churn.12').elementHandle();</code></pre>
+            <pre><code><span class="tok-c">// A fixture that resolves the element and hands back the handle.</span>
+<span class="tok-k">const</span> handle = <span class="tok-k">await</span> page.<span class="tok-f">getByTestId</span>(<span class="tok-s">'churn.12'</span>).<span class="tok-f">elementHandle</span>();</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// A fixture that hands back the locator instead.
-const target = page.getByTestId('churn.12');</code></pre>
+            <pre><code><span class="tok-c">// A fixture that hands back the locator instead.</span>
+<span class="tok-k">const</span> target = page.<span class="tok-f">getByTestId</span>(<span class="tok-s">'churn.12'</span>);</code></pre>
           </div>
         </div>
         <p class="why">An ElementHandle points at one specific DOM node. A locator points at a query. When the framework re-renders - a signal updates, a list re-keys, a route reloads - the node the handle holds is detached, and every action on it fails against a DOM nobody is looking at any more. The locator runs its query again and finds the element that exists now. This is also why a fixture can safely build locators before the test does anything at all.</p>
@@ -455,14 +483,14 @@ const target = page.getByTestId('churn.12');</code></pre>
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// A page object that resolves state while it is being constructed.
-const submitCount = await page.getByTestId('late.slot').getByRole('button').count();</code></pre>
+            <pre><code><span class="tok-c">// A page object that resolves state while it is being constructed.</span>
+<span class="tok-k">const</span> submitCount = <span class="tok-k">await</span> page.<span class="tok-f">getByTestId</span>(<span class="tok-s">'late.slot'</span>).<span class="tok-f">getByRole</span>(<span class="tok-s">'button'</span>).<span class="tok-f">count</span>();</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// A page object that exposes the locator and lets the assertion do the waiting.
-const submit = page.getByTestId('late.slot').getByRole('button', { name: 'Submit' });
-await expect(submit).toHaveCount(1);</code></pre>
+            <pre><code><span class="tok-c">// A page object that exposes the locator and lets the assertion do the waiting.</span>
+<span class="tok-k">const</span> submit = page.<span class="tok-f">getByTestId</span>(<span class="tok-s">'late.slot'</span>).<span class="tok-f">getByRole</span>(<span class="tok-s">'button'</span>, { name: <span class="tok-s">'Submit'</span> });
+<span class="tok-k">await</span> <span class="tok-f">expect</span>(submit).<span class="tok-f">toHaveCount</span>(<span class="tok-n">1</span>);</code></pre>
           </div>
         </div>
         <p class="why">Fixtures run before the test body, which is usually before the application has settled. A count taken there is not wrong later - it was wrong when it was taken. Expose the locator and let the assertion do the waiting; the page object stays cheap to construct and correct at every point in the test.</p>
@@ -477,13 +505,13 @@ await expect(submit).toHaveCount(1);</code></pre>
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// The same intent, resolved eagerly: there is nothing to find yet.
-const handleBefore = await page.$('button');</code></pre>
+            <pre><code><span class="tok-c">// The same intent, resolved eagerly: there is nothing to find yet.</span>
+<span class="tok-k">const</span> handleBefore = <span class="tok-k">await</span> page.<span class="tok-f">$</span>(<span class="tok-s">'button'</span>);</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// Built against a blank page: a locator is a description, not a lookup.
-const submit = page.getByRole('button', { name: 'Submit' });</code></pre>
+            <pre><code><span class="tok-c">// Built against a blank page: a locator is a description, not a lookup.</span>
+<span class="tok-k">const</span> submit = page.<span class="tok-f">getByRole</span>(<span class="tok-s">'button'</span>, { name: <span class="tok-s">'Submit'</span> });</code></pre>
           </div>
         </div>
         <p class="why">This is the property that makes page objects work. Because nothing is resolved until an action or an assertion runs, a page object can be constructed once and used across navigations without rebuilding anything. The eager equivalent cannot exist yet, and has to be re-resolved after every navigation - which is the bug in every &quot;element not attached&quot; stack trace.</p>
@@ -498,18 +526,18 @@ const submit = page.getByRole('button', { name: 'Submit' });</code></pre>
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// A locator captured from one page, then used after opening another.
-const rowsOnFirstPage = page.locator('tr.bm-grid__row');
-const second = await context.newPage();
-await second.goto('/grid?rows=40&amp;cols=6&amp;seed=bm-v1', { waitUntil: 'commit' });
-await second.waitForSelector('html[data-bm-ready]');
-const seenFromFirst = await rowsOnFirstPage.count();</code></pre>
+            <pre><code><span class="tok-c">// A locator captured from one page, then used after opening another.</span>
+<span class="tok-k">const</span> rowsOnFirstPage = page.<span class="tok-f">locator</span>(<span class="tok-s">'tr.bm-grid__row'</span>);
+<span class="tok-k">const</span> second = <span class="tok-k">await</span> context.<span class="tok-f">newPage</span>();
+<span class="tok-k">await</span> second.<span class="tok-f">goto</span>(<span class="tok-s">'/grid?rows=40&amp;cols=6&amp;seed=bm-v1'</span>, { waitUntil: <span class="tok-s">'commit'</span> });
+<span class="tok-k">await</span> second.<span class="tok-f">waitForSelector</span>(<span class="tok-s">'html[data-bm-ready]'</span>);
+<span class="tok-k">const</span> seenFromFirst = <span class="tok-k">await</span> rowsOnFirstPage.<span class="tok-f">count</span>();</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// Each page gets its own locators, built from that page.
-const rowsOnSecondPage = second.locator('tr.bm-grid__row');
-const seenFromSecond = await rowsOnSecondPage.count();</code></pre>
+            <pre><code><span class="tok-c">// Each page gets its own locators, built from that page.</span>
+<span class="tok-k">const</span> rowsOnSecondPage = second.<span class="tok-f">locator</span>(<span class="tok-s">'tr.bm-grid__row'</span>);
+<span class="tok-k">const</span> seenFromSecond = <span class="tok-k">await</span> rowsOnSecondPage.<span class="tok-f">count</span>();</code></pre>
           </div>
         </div>
         <p class="why">A locator is bound to the frame that created it, so passing one between fixtures, storing one at module scope, or keeping one across a popup or a new tab silently queries the wrong document. There is no error - the query runs, against the page you were not looking at. Build locators from the page object you were handed, and give a second page its own.</p>
@@ -528,13 +556,13 @@ const seenFromSecond = await rowsOnSecondPage.count();</code></pre>
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// Every element of that role in the document is a candidate.
-const unscoped = page.getByRole('button', { name: BIG_NAME, exact: true });</code></pre>
+            <pre><code><span class="tok-c">// Every element of that role in the document is a candidate.</span>
+<span class="tok-k">const</span> unscoped = page.<span class="tok-f">getByRole</span>(<span class="tok-s">'button'</span>, { name: BIG_NAME, exact: <span class="tok-k">true</span> });</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// The container is found by test id; the accessible name is asserted inside it.
-const scoped = grid.cellByName(grid.row(BIG_ROW), BIG_NAME);</code></pre>
+            <pre><code><span class="tok-c">// The container is found by test id; the accessible name is asserted inside it.</span>
+<span class="tok-k">const</span> scoped = grid.<span class="tok-f">cellByName</span>(grid.<span class="tok-f">row</span>(BIG_ROW), BIG_NAME);</code></pre>
           </div>
         </div>
         <p class="why">An unscoped role query computes an accessible name for every element of that role in the document. Scoped to a container it computes one per candidate inside that container. The test still asserts that the control is reachable by its accessible name - which is the thing worth asserting - and stops paying for the rest of the page to be examined.</p>
@@ -549,20 +577,20 @@ const scoped = grid.cellByName(grid.row(BIG_ROW), BIG_NAME);</code></pre>
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// Each step re-resolves against every match of the step before it.
-const fromBroadRoot = page
-  .locator('tr.bm-grid__row')
-  .locator('td.bm-grid__cellwrap')
-  .locator('button.bm-grid__cell')
-  .nth(index);</code></pre>
+            <pre><code><span class="tok-c">// Each step re-resolves against every match of the step before it.</span>
+<span class="tok-k">const</span> fromBroadRoot = page
+  .<span class="tok-f">locator</span>(<span class="tok-s">'tr.bm-grid__row'</span>)
+  .<span class="tok-f">locator</span>(<span class="tok-s">'td.bm-grid__cellwrap'</span>)
+  .<span class="tok-f">locator</span>(<span class="tok-s">'button.bm-grid__cell'</span>)
+  .<span class="tok-f">nth</span>(index);</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// Identical chaining, but the first step matches exactly one element.
-const fromUniqueRoot = grid.row(BIG_ROW)
-  .locator('td.bm-grid__cellwrap')
-  .locator('button.bm-grid__cell')
-  .nth(BIG_COL);</code></pre>
+            <pre><code><span class="tok-c">// Identical chaining, but the first step matches exactly one element.</span>
+<span class="tok-k">const</span> fromUniqueRoot = grid.<span class="tok-f">row</span>(BIG_ROW)
+  .<span class="tok-f">locator</span>(<span class="tok-s">'td.bm-grid__cellwrap'</span>)
+  .<span class="tok-f">locator</span>(<span class="tok-s">'button.bm-grid__cell'</span>)
+  .<span class="tok-f">nth</span>(BIG_COL);</code></pre>
           </div>
         </div>
         <p class="why">Each chained step runs its selector against every element the previous step matched. Three broad steps over a large table is thousands of subqueries; the same three steps from a container that matches exactly one element is three. The fix is never &quot;stop chaining&quot; - it is to make the first step unique.</p>
@@ -577,16 +605,16 @@ const fromUniqueRoot = grid.row(BIG_ROW)
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// Every row is a candidate, and each candidate pays a text scan.
-const filtered = page
-  .getByRole('row')
-  .filter({ hasText: `Row ${BIG_ROW} ` })
-  .getByRole('button', { name: BIG_NAME, exact: true });</code></pre>
+            <pre><code><span class="tok-c">// Every row is a candidate, and each candidate pays a text scan.</span>
+<span class="tok-k">const</span> filtered = page
+  .<span class="tok-f">getByRole</span>(<span class="tok-s">'row'</span>)
+  .<span class="tok-f">filter</span>({ hasText: <span class="tok-s">`Row ${</span>BIG_ROW<span class="tok-s">}</span><span class="tok-s"> `</span> })
+  .<span class="tok-f">getByRole</span>(<span class="tok-s">'button'</span>, { name: BIG_NAME, exact: <span class="tok-k">true</span> });</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// The row is addressed directly; there is nothing left to filter.
-const addressed = grid.cellByName(grid.row(BIG_ROW), BIG_NAME);</code></pre>
+            <pre><code><span class="tok-c">// The row is addressed directly; there is nothing left to filter.</span>
+<span class="tok-k">const</span> addressed = grid.<span class="tok-f">cellByName</span>(grid.<span class="tok-f">row</span>(BIG_ROW), BIG_NAME);</code></pre>
           </div>
         </div>
         <p class="why">Filtering is the right tool when the thing you want can only be described by its content, and the candidate set is already small. Reaching for it against every row of a table means scanning the text of every row to find the one whose identity you already knew. If the container has a test id, use it.</p>
@@ -605,16 +633,16 @@ const addressed = grid.cellByName(grid.row(BIG_ROW), BIG_NAME);</code></pre>
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// The strict-mode violation is real; .first() hides it and takes whatever is
-// first in document order.
-const first = page.locator(`#${canonicalId}`).first();
-const clash = await first.getAttribute('data-clash');</code></pre>
+            <pre><code><span class="tok-c">// The strict-mode violation is real; .first() hides it and takes whatever is</span>
+<span class="tok-c">// first in document order.</span>
+<span class="tok-k">const</span> first = page.<span class="tok-f">locator</span>(<span class="tok-s">`#${</span>canonicalId<span class="tok-s">}</span><span class="tok-s">`</span>).<span class="tok-f">first</span>();
+<span class="tok-k">const</span> clash = <span class="tok-k">await</span> first.<span class="tok-f">getAttribute</span>(<span class="tok-s">'data-clash'</span>);</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// Scope to something that is genuinely unique, and let strict mode stand.
-const scoped = page.getByTestId('card.30').getByRole('button', { name: 'Open 30', exact: true });
-const testId = await scoped.getAttribute('data-testid');</code></pre>
+            <pre><code><span class="tok-c">// Scope to something that is genuinely unique, and let strict mode stand.</span>
+<span class="tok-k">const</span> scoped = page.<span class="tok-f">getByTestId</span>(<span class="tok-s">'card.30'</span>).<span class="tok-f">getByRole</span>(<span class="tok-s">'button'</span>, { name: <span class="tok-s">'Open 30'</span>, exact: <span class="tok-k">true</span> });
+<span class="tok-k">const</span> testId = <span class="tok-k">await</span> scoped.<span class="tok-f">getAttribute</span>(<span class="tok-s">'data-testid'</span>);</code></pre>
           </div>
         </div>
         <p class="why">A strict-mode violation says the locator does not identify one element. .first() does not fix that; it picks one and carries on, and the test passes against whatever happens to render earliest. When something is later inserted above your target - a banner, a duplicate id, a second instance of the component - the test keeps passing and stops testing what it claims to. Narrow the root instead.</p>
@@ -629,13 +657,13 @@ const testId = await scoped.getAttribute('data-testid');</code></pre>
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// Position within the row, which the template owns.
-const byPosition = grid.row(10).getByRole('button').nth(BIG_COL);</code></pre>
+            <pre><code><span class="tok-c">// Position within the row, which the template owns.</span>
+<span class="tok-k">const</span> byPosition = grid.<span class="tok-f">row</span>(<span class="tok-n">10</span>).<span class="tok-f">getByRole</span>(<span class="tok-s">'button'</span>).<span class="tok-f">nth</span>(BIG_COL);</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// Identity within the row, which the data owns.
-const byIdentity = grid.row(10).getByTestId(`cell.10.${BIG_COL}`);</code></pre>
+            <pre><code><span class="tok-c">// Identity within the row, which the data owns.</span>
+<span class="tok-k">const</span> byIdentity = grid.<span class="tok-f">row</span>(<span class="tok-n">10</span>).<span class="tok-f">getByTestId</span>(<span class="tok-s">`cell.10.${</span>BIG_COL<span class="tok-s">}</span><span class="tok-s">`</span>);</code></pre>
           </div>
         </div>
         <p class="why">Indexing into a list of matches ties the test to DOM order. Reordering columns, adding a button, or rendering an extra element conditionally changes what the index refers to, and nothing fails - the test asserts confidently against a different element. Where a stable identity exists, address it; nth() is defensible only in a tree you fully control, such as a component test.</p>
@@ -654,14 +682,14 @@ const byIdentity = grid.row(10).getByTestId(`cell.10.${BIG_COL}`);</code></pre>
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// A snapshot of right now. No retry, so the assertion runs against whatever
-// the page happened to be mid-render.
-const countNow = await submit.count();</code></pre>
+            <pre><code><span class="tok-c">// A snapshot of right now. No retry, so the assertion runs against whatever</span>
+<span class="tok-c">// the page happened to be mid-render.</span>
+<span class="tok-k">const</span> countNow = <span class="tok-k">await</span> submit.<span class="tok-f">count</span>();</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// Retries until the page agrees or the timeout expires.
-await expect(submit).toHaveCount(1);</code></pre>
+            <pre><code><span class="tok-c">// Retries until the page agrees or the timeout expires.</span>
+<span class="tok-k">await</span> <span class="tok-f">expect</span>(submit).<span class="tok-f">toHaveCount</span>(<span class="tok-n">1</span>);</code></pre>
           </div>
         </div>
         <p class="why">await locator.count() resolves immediately against a page that may still be rendering, and the number it returns is then asserted with no retry. expect(locator).toHaveCount(n) re-runs the query until it matches or gives up. The difference is the difference between a flaky suite and a slow one, and only one of those is worth having.</p>
@@ -676,16 +704,16 @@ await expect(submit).toHaveCount(1);</code></pre>
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// A frozen array of positional locators. Each one means &quot;the nth match as of
-// whenever you next use it&quot;, which is not the element you looked at.
-const items = await page.getByTestId('churn.list').locator('.bm-churn__cell').all();
-const thirdValueThen = await items[3].textContent();</code></pre>
+            <pre><code><span class="tok-c">// A frozen array of positional locators. Each one means &quot;the nth match as of</span>
+<span class="tok-c">// whenever you next use it&quot;, which is not the element you looked at.</span>
+<span class="tok-k">const</span> items = <span class="tok-k">await</span> page.<span class="tok-f">getByTestId</span>(<span class="tok-s">'churn.list'</span>).<span class="tok-f">locator</span>(<span class="tok-s">'.bm-churn__cell'</span>).<span class="tok-f">all</span>();
+<span class="tok-k">const</span> thirdValueThen = <span class="tok-k">await</span> items[<span class="tok-n">3</span>].<span class="tok-f">textContent</span>();</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// Address the item, not its position, and assert on the locator.
-const item = page.getByTestId('churn.3');
-await expect(item).toHaveAttribute('data-row', '3');</code></pre>
+            <pre><code><span class="tok-c">// Address the item, not its position, and assert on the locator.</span>
+<span class="tok-k">const</span> item = page.<span class="tok-f">getByTestId</span>(<span class="tok-s">'churn.3'</span>);
+<span class="tok-k">await</span> <span class="tok-f">expect</span>(item).<span class="tok-f">toHaveAttribute</span>(<span class="tok-s">'data-row'</span>, <span class="tok-s">'3'</span>);</code></pre>
           </div>
         </div>
         <p class="why">locator.all() resolves the matches once and hands back an array of nth-indexed locators. If the list re-renders, re-sorts or grows, entry 3 still means &quot;the fourth match whenever you next use it&quot; - which may now be a different item. Assert the count first if you must iterate, and address items by identity inside the loop rather than by where they were.</p>
@@ -700,13 +728,13 @@ await expect(item).toHaveAttribute('data-row', '3');</code></pre>
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// A string. Whatever it says, it says forever.
-const text = await cell.textContent();</code></pre>
+            <pre><code><span class="tok-c">// A string. Whatever it says, it says forever.</span>
+<span class="tok-k">const</span> text = <span class="tok-k">await</span> cell.<span class="tok-f">textContent</span>();</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// The locator, asserted. Re-reads the element until it agrees or times out.
-await expect(cell).toHaveText(textNow ?? '');</code></pre>
+            <pre><code><span class="tok-c">// The locator, asserted. Re-reads the element until it agrees or times out.</span>
+<span class="tok-k">await</span> <span class="tok-f">expect</span>(cell).<span class="tok-f">toHaveText</span>(textNow ?? <span class="tok-s">''</span>);</code></pre>
           </div>
         </div>
         <p class="why">Capturing a value and asserting on the variable moves the assertion off the page and into your process. Whatever the string said when it was read, it says forever - so a test can pass against a value the interface stopped showing seconds ago, or fail because the read landed one frame early. Pass the locator to expect() and let it re-read.</p>
@@ -721,15 +749,15 @@ await expect(cell).toHaveText(textNow ?? '');</code></pre>
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>// Costs the same whether the page took 10ms or 2 seconds, and still fails when
-// the machine is slower than whoever picked the number.
-await page.waitForTimeout(sleepMs);
-await expect(submit).toHaveCount(1);</code></pre>
+            <pre><code><span class="tok-c">// Costs the same whether the page took 10ms or 2 seconds, and still fails when</span>
+<span class="tok-c">// the machine is slower than whoever picked the number.</span>
+<span class="tok-k">await</span> page.<span class="tok-f">waitForTimeout</span>(sleepMs);
+<span class="tok-k">await</span> <span class="tok-f">expect</span>(submit).<span class="tok-f">toHaveCount</span>(<span class="tok-n">1</span>);</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>// Returns as soon as the page is ready, and waits longer when it has to.
-await expect(page.getByTestId('late.slot').getByRole('button', { name: 'Submit' })).toHaveCount(1);</code></pre>
+            <pre><code><span class="tok-c">// Returns as soon as the page is ready, and waits longer when it has to.</span>
+<span class="tok-k">await</span> <span class="tok-f">expect</span>(page.<span class="tok-f">getByTestId</span>(<span class="tok-s">'late.slot'</span>).<span class="tok-f">getByRole</span>(<span class="tok-s">'button'</span>, { name: <span class="tok-s">'Submit'</span> })).<span class="tok-f">toHaveCount</span>(<span class="tok-n">1</span>);</code></pre>
           </div>
         </div>
         <p class="why">A sleep encodes a guess about someone else's hardware. It is pure cost when the page was ready immediately, and it fails anyway when CI is loaded. A web-first assertion returns as soon as the condition holds and waits longer when it has to - faster in the common case and more reliable in the bad one. There is no trade-off here to weigh.</p>
@@ -739,7 +767,7 @@ await expect(page.getByTestId('late.slot').getByRole('button', { name: 'Submit' 
   <p class="fingerprint" id="fingerprint"></p>
 </main>
 <div id="pop" role="dialog" aria-modal="false" aria-label="What the measurement showed"></div>
-<script id="proofs" type="application/json">{"fixture.handle":{"title":"Hand out locators, not element handles","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"Measured on a list that replaces its nodes on every tick.","lines":[["What the wrong form did","element handle detached after one re-render; click failed with \"elementHandle.click: Element is not attached to the DOM\""],["What the right form did","locator re-resolved and clicked the current element"]],"facts":[["stillAttached","false"],["domNodes","103"],["clicked","churn-12"]]},"fixture.state":{"title":"Do not await DOM state in a constructor","kind":"correctness","url":"/late?lateMode=append&delay=800&rows=200","note":"The control arrives 800 ms after the app reports its first render.","lines":[["What the wrong form did","count() in the constructor returned 0"],["What the right form did","the same locator, asserted rather than counted, resolved to 1"]],"facts":[["delayMs","800"],["constructorCount","0"],["laterCount","1"]]},"fixture.lazy":{"title":"Build locators before the page exists","kind":"correctness","url":"/late?lateMode=append&delay=0&rows=200","note":"Both forms attempted before navigation, then used after it.","lines":[["What the wrong form did","page.$() before navigation returned null, and would have to be re-resolved after every navigation"],["What the right form did","the locator built before navigation resolved to 1 element afterwards"]],"facts":[["resolved","1"]]},"fixture.binding":{"title":"A locator belongs to one page","kind":"correctness","url":"/grid?rows=5&cols=6&seed=bm-v1","note":"Two pages open at once, with different row counts, in the same context.","lines":[["What the wrong form did","the captured locator kept reporting 5 rows, its own page's count, after a second page opened"],["What the right form did","a locator built from the second page reported 40"]],"facts":[["firstPageRows","5"],["secondPageRows","40"],["seenFromFirst","5"],["seenFromSecond","40"]]},"scope.role":{"title":"Scope the expensive query, keep the assertion","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Same element, same accessible name, one paired measurement each.","lines":[["The recommended form","38.3 ms"],["What it replaces","208.2 ms"],["Difference","5.4× "],["Page size","30,034 elements"]],"facts":[["role","button"],["name","Status for row 750"]]},"scope.chain":{"title":"Chain from something unique","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Identical chains, differing only in whether the first step matches one element or every row.","lines":[["The recommended form","35.4 ms"],["What it replaces","2.01 s"],["Difference","56.6× "],["Page size","30,034 elements"]],"facts":[["chainSteps","3"],["broadFirstStep","1500"]]},"scope.filter":{"title":"Filter a narrow set, or address the element instead","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Filtering every row against addressing the row directly.","lines":[["The recommended form","9.1 ms"],["What it replaces","178.2 ms"],["Difference","19.6× "],["Page size","30,034 elements"]],"facts":[["candidateRows","1500"]]},"strict.first":{"title":"Never silence a strict-mode violation with .first()","kind":"correctness","url":"/ambiguous?dup=60&dupIds=4&target=30","note":"Four elements deliberately reuse the target id, rendered ahead of it.","lines":[["What the wrong form did",".first() resolved to a decoy (data-clash=\"0\") while reporting success"],["What the right form did","the scoped locator resolved to data-testid=\"action.30\""]],"facts":[["idMatches","5"],["strictError","locator.click: Error: strict mode violation: locator('#action-r30') resolved to 5 elements:"]]},"strict.nth":{"title":"nth() indexes the template, not the data","kind":"correctness","url":"/grid?rows=40&cols=6&seed=bm-v1&mutate=reorder","note":"The same two locators before and after the column order is reversed.","lines":[["What the wrong form did","nth(2) resolved to column 2 before the reorder and column 3 after it"],["What the right form did","the identity locator resolved to column 2 both times"]],"facts":[["mutation","reorder"],["positionBefore","2"],["positionAfter","3"]]},"wait.count":{"title":"count() asks, toHaveCount() waits","kind":"correctness","url":"/late?lateMode=append&delay=800&rows=200","note":"The control appears 800 ms after the page reports itself rendered.","lines":[["What the wrong form did","count() returned 0 while the control was still 800ms away"],["What the right form did","toHaveCount(1) retried for 798ms and passed"]],"facts":[["delayMs","800"],["countNow","0"],["waitedMs","798"]]},"wait.all":{"title":"all() freezes a list that has not stopped moving","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"A list that re-keys every tick, read twice through the same array.","lines":[["What the wrong form did","items[3] read \"v3.1\" and then \"v3.2\" without anything re-reading the list"],["What the right form did","an identity locator kept pointing at data-row=\"3\" across the same re-render"]],"facts":[["items","40"],["thirdValueThen","v3.1"],["thirdValueNow","v3.2"]]},"wait.snapshot":{"title":"An awaited value is not an assertion","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"Both reads taken across one re-render of the same element.","lines":[["What the wrong form did","the captured string still reads \"v7.0\" after the element changed to \"v7.1\""],["What the right form did","the assertion re-read the element and matched its current value"]],"facts":[["captured","v7.0"],["current","v7.1"]]},"wait.sleep":{"title":"A fixed sleep pays the worst case every time","kind":"cost","url":"/late?lateMode=append&delay=800&rows=200","note":"Wall clock for each form, against a control that appears after 800 ms.","lines":[["The recommended form","802.0 ms"],["What it replaces","3.02 s"],["Difference","3.8× "],["Page size","223 elements"]],"facts":[["renderDelayMs","800"],["sleepMs","3000"]]}}</script>
+<script id="proofs" type="application/json">{"fixture.handle":{"title":"Hand out locators, not element handles","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"Measured on a list that replaces its nodes on every tick.","test":"S14 fixture.handle | a handle from a fixture dies with the DOM that made it","source":{"label":"e2e/patterns/s14-composition.spec.ts:87","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L87-L129"},"lines":[["What the wrong form did","element handle detached after one re-render; click failed with \"elementHandle.click: Element is not attached to the DOM\""],["What the right form did","locator re-resolved and clicked the current element"]],"facts":[["stillAttached","false"],["domNodes","103"],["clicked","churn-12"]]},"fixture.state":{"title":"Do not await DOM state in a constructor","kind":"correctness","url":"/late?lateMode=append&delay=800&rows=200","note":"The control arrives 800 ms after the app reports its first render.","test":"S14 fixture.state | a page object that awaits in its constructor is already stale","source":{"label":"e2e/patterns/s14-composition.spec.ts:131","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L131-L159"},"lines":[["What the wrong form did","count() in the constructor returned 0"],["What the right form did","the same locator, asserted rather than counted, resolved to 1"]],"facts":[["delayMs","800"],["constructorCount","0"],["laterCount","1"]]},"fixture.lazy":{"title":"Build locators before the page exists","kind":"correctness","url":"/late?lateMode=append&delay=0&rows=200","note":"Both forms attempted before navigation, then used after it.","test":"S14 fixture.lazy | a locator can be built before the page it describes exists","source":{"label":"e2e/patterns/s14-composition.spec.ts:161","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L161-L186"},"lines":[["What the wrong form did","page.$() before navigation returned null, and would have to be re-resolved after every navigation"],["What the right form did","the locator built before navigation resolved to 1 element afterwards"]],"facts":[["resolved","1"]]},"fixture.binding":{"title":"A locator belongs to one page","kind":"correctness","url":"/grid?rows=5&cols=6&seed=bm-v1","note":"Two pages open at once, with different row counts, in the same context.","test":"S14 fixture.binding | a locator is bound to the page that created it","source":{"label":"e2e/patterns/s14-composition.spec.ts:188","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L188-L219"},"lines":[["What the wrong form did","the captured locator kept reporting 5 rows, its own page's count, after a second page opened"],["What the right form did","a locator built from the second page reported 40"]],"facts":[["firstPageRows","5"],["secondPageRows","40"],["seenFromFirst","5"],["seenFromSecond","40"]]},"scope.role":{"title":"Scope the expensive query, keep the assertion","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Same element, same accessible name, one paired measurement each.","test":"S14 scope.role | scoping a role query to its container","source":{"label":"e2e/patterns/s14-composition.spec.ts:244","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L244-L265"},"lines":[["The recommended form","38.3 ms"],["What it replaces","208.2 ms"],["Difference","5.4× "],["Page size","30,034 elements"]],"facts":[["role","button"],["name","Status for row 750"]]},"scope.chain":{"title":"Chain from something unique","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Identical chains, differing only in whether the first step matches one element or every row.","test":"S14 scope.chain | chaining from a unique root against chaining from a broad one","source":{"label":"e2e/patterns/s14-composition.spec.ts:267","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L267-L297"},"lines":[["The recommended form","35.4 ms"],["What it replaces","2.01 s"],["Difference","56.6× "],["Page size","30,034 elements"]],"facts":[["chainSteps","3"],["broadFirstStep","1500"]]},"scope.filter":{"title":"Filter a narrow set, or address the element instead","kind":"cost","url":"/grid?rows=1500&cols=6&seed=bm-v1","note":"Filtering every row against addressing the row directly.","test":"S14 scope.filter | filtering a narrow set against filtering the document","source":{"label":"e2e/patterns/s14-composition.spec.ts:299","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L299-L323"},"lines":[["The recommended form","9.1 ms"],["What it replaces","178.2 ms"],["Difference","19.6× "],["Page size","30,034 elements"]],"facts":[["candidateRows","1500"]]},"strict.first":{"title":"Never silence a strict-mode violation with .first()","kind":"correctness","url":"/ambiguous?dup=60&dupIds=4&target=30","note":"Four elements deliberately reuse the target id, rendered ahead of it.","test":"S14 strict.first | .first() silences the violation and keeps the wrong element","source":{"label":"e2e/patterns/s14-composition.spec.ts:329","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L329-L367"},"lines":[["What the wrong form did",".first() resolved to a decoy (data-clash=\"0\") while reporting success"],["What the right form did","the scoped locator resolved to data-testid=\"action.30\""]],"facts":[["idMatches","5"],["strictError","locator.click: Error: strict mode violation: locator('#action-r30') resolved to 5 elements:"]]},"strict.nth":{"title":"nth() indexes the template, not the data","kind":"correctness","url":"/grid?rows=40&cols=6&seed=bm-v1&mutate=reorder","note":"The same two locators before and after the column order is reversed.","test":"S14 strict.nth | nth() indexes the template, not the data","source":{"label":"e2e/patterns/s14-composition.spec.ts:369","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L369-L410"},"lines":[["What the wrong form did","nth(2) resolved to column 2 before the reorder and column 3 after it"],["What the right form did","the identity locator resolved to column 2 both times"]],"facts":[["mutation","reorder"],["positionBefore","2"],["positionAfter","3"]]},"wait.count":{"title":"count() asks, toHaveCount() waits","kind":"correctness","url":"/late?lateMode=append&delay=800&rows=200","note":"The control appears 800 ms after the page reports itself rendered.","test":"S14 wait.count | count() is a question, toHaveCount is a wait","source":{"label":"e2e/patterns/s14-composition.spec.ts:416","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L416-L445"},"lines":[["What the wrong form did","count() returned 0 while the control was still 800ms away"],["What the right form did","toHaveCount(1) retried for 798ms and passed"]],"facts":[["delayMs","800"],["countNow","0"],["waitedMs","798"]]},"wait.all":{"title":"all() freezes a list that has not stopped moving","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"A list that re-keys every tick, read twice through the same array.","test":"S14 wait.all | all() snapshots the list, and lists move","source":{"label":"e2e/patterns/s14-composition.spec.ts:447","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L447-L479"},"lines":[["What the wrong form did","items[3] read \"v3.1\" and then \"v3.2\" without anything re-reading the list"],["What the right form did","an identity locator kept pointing at data-row=\"3\" across the same re-render"]],"facts":[["items","40"],["thirdValueThen","v3.1"],["thirdValueNow","v3.2"]]},"wait.snapshot":{"title":"An awaited value is not an assertion","kind":"correctness","url":"/churn?rows=40&hz=10&trackby=0","note":"Both reads taken across one re-render of the same element.","test":"S14 wait.snapshot | an awaited value is not an assertion","source":{"label":"e2e/patterns/s14-composition.spec.ts:481","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L481-L510"},"lines":[["What the wrong form did","the captured string still reads \"v7.0\" after the element changed to \"v7.1\""],["What the right form did","the assertion re-read the element and matched its current value"]],"facts":[["captured","v7.0"],["current","v7.1"]]},"wait.sleep":{"title":"A fixed sleep pays the worst case every time","kind":"cost","url":"/late?lateMode=append&delay=800&rows=200","note":"Wall clock for each form, against a control that appears after 800 ms.","test":"S14 wait.sleep | a fixed sleep pays the worst case every time","source":{"label":"e2e/patterns/s14-composition.spec.ts:512","href":"https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/e2e/patterns/s14-composition.spec.ts#L512-L546"},"lines":[["The recommended form","802.0 ms"],["What it replaces","3.02 s"],["Difference","3.8× "],["Page size","223 elements"]],"facts":[["renderDelayMs","800"],["sleepMs","3000"]]}}</script>
 <script>
 const PROOFS = JSON.parse(document.getElementById('proofs').textContent);
 const META = {"runId":"20260921090556","browserVersion":"141.0.7390.37","generatedAt":"2026-09-21T09:07:57.961Z","proved":13,"total":13,"costProofs":4};
@@ -923,7 +951,18 @@ function proofHtml(id) {
       : 'Both forms run against the same page, in the same test.') + '</div>' +
     '<div class="pop-rows">' + rows + '</div>' +
     facts +
-    '<div class="pop-note">' + esc(p.note || '') + '<br>' + esc(p.url) + '</div>';
+    '<div class="pop-note">' + esc(p.note || '') + '<br>' + esc(p.url) + '</div>' +
+    sourceHtml(p);
+}
+
+// Where the proof came from: the test that ran both forms and recorded the result.
+function sourceHtml(p) {
+  if (!p.source) return '';
+  const where = p.source.href
+    ? '<a class="ref-link" href="' + esc(p.source.href) + '" target="_blank" rel="noopener">See the proof: the test that recorded this &rarr;</a>'
+    : 'Proof recorded by:';
+  return '<div class="pop-source">' + where + '<br><code>' + esc(p.test || '') + '</code><br><code>' +
+    esc(p.source.label) + '</code></div>';
 }
 
 document.addEventListener('click', (e) => {

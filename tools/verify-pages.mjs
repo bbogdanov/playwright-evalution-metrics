@@ -251,6 +251,14 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [390, 780, 'dark']]) {
       problems.push(`${tag}: proof popover off-screen or under the bar: ${JSON.stringify(box)}`);
     }
     if ((await pop.locator('.pop-row').count()) < 2) problems.push(`${tag}: proof ${i} has no figures`);
+    // The proof has to say where it came from. Without a GitHub remote there is no
+    // href, but the spec path and line are still printed.
+    const source = (await pop.locator('.pop-source').innerText().catch(() => '')).trim();
+    if (!/s14-composition\.spec\.ts:\d+/.test(source)) problems.push(`${tag}: proof ${i} does not name its test (${source})`);
+    const href = await pop.locator('.pop-source a').getAttribute('href').catch(() => null);
+    if (href && !/s14-composition\.spec\.ts#L\d+-L\d+$/.test(href)) problems.push(`${tag}: proof ${i} links to ${href}`);
+    // Syntax highlighting must not change the code a reader copies.
+    if (i === 0 && !(await page.locator('article.pattern .tok-k').count())) problems.push(`${tag}: examples are not highlighted`);
     await page.keyboard.press('Escape');
   }
 
