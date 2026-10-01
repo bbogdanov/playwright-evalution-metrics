@@ -18,6 +18,7 @@ import { tokenBlock, SHELL_STYLES, SHELL_SCRIPT, NAV_STYLES, NAV_SCRIPT, siteNav
 import { FAMILIES, PATTERNS } from './composition-patterns.mjs';
 import { snippetsFor } from './snippets.mjs';
 import { blobUrl } from './repo-link.mjs';
+import { highlightTs, tokenVars, HIGHLIGHT_STYLES } from './highlight.mjs';
 
 const SPEC = 'e2e/patterns/s14-composition.spec.ts';
 const OUT = resolve(process.env.BM_PATTERNS_PAGE ?? 'results/dashboard/patterns.html');
@@ -39,6 +40,25 @@ if (missing.length) {
   process.exit(1);
 }
 if (extra.length) console.warn(`Note: ${SPEC} marks snippets no pattern claims: ${extra.join(', ')}`);
+
+/**
+ * Where each pattern's proof lives: the line range of its test in the spec.
+ *
+ * Found by the test's title, `test('S14 <pattern id> | ...`, through the first
+ * unindented `});` after it. Computed from the spec on disk, so the link is only
+ * as right as the commit the page is built from - which is the commit CI builds.
+ */
+const PROOF_SOURCE = (() => {
+  const lines = readFileSync(resolve(SPEC), 'utf8').split('\n');
+  const out = {};
+  lines.forEach((line, i) => {
+    const m = line.match(/^test\('S14 ([\w.-]+) \|\s*(.*?)',/);
+    if (!m) return;
+    const close = lines.findIndex((l, j) => j > i && /^\}\);\s*$/.test(l));
+    out[m[1]] = { title: `S14 ${m[1]} | ${m[2]}`, start: i + 1, end: close === -1 ? i + 1 : close + 1 };
+  });
+  return out;
+})();
 
 const proofFile = existsSync(PROOFS) ? JSON.parse(readFileSync(PROOFS, 'utf8')) : null;
 const proofs = proofFile?.proofs ?? {};
@@ -64,6 +84,13 @@ for (const p of PATTERNS) {
     kind: proof.kind,
     url: proof.url,
     note: p.proofNote,
+    test: PROOF_SOURCE[p.id]?.title ?? null,
+    source: PROOF_SOURCE[p.id]
+      ? {
+          label: `${SPEC}:${PROOF_SOURCE[p.id].start}`,
+          href: SPEC_URL ? `${SPEC_URL}#L${PROOF_SOURCE[p.id].start}-L${PROOF_SOURCE[p.id].end}` : null,
+        }
+      : null,
     lines:
       proof.kind === 'cost'
         ? [
@@ -91,11 +118,11 @@ function patternCard(p) {
         <div class="pair">
           <div class="side dont">
             <header><span class="mark" aria-hidden="true">✕</span>Don't</header>
-            <pre><code>${esc(snips.dont)}</code></pre>
+            <pre><code>${highlightTs(snips.dont)}</code></pre>
           </div>
           <div class="side do">
             <header><span class="mark" aria-hidden="true">✓</span>Do</header>
-            <pre><code>${esc(snips.do)}</code></pre>
+            <pre><code>${highlightTs(snips.do)}</code></pre>
           </div>
         </div>
         <p class="why">${esc(p.why)}</p>
@@ -125,17 +152,17 @@ const html = `<!doctype html>
   --status-good: ${STATUS.good};
   --status-critical: ${STATUS.critical};
   --do-bg: rgba(12,163,12,0.07);
-  --dont-bg: rgba(208,59,59,0.07);
+  --dont-bg: rgba(208,59,59,0.07);${tokenVars('light')}
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {${tokenBlock('dark')}
     --do-bg: rgba(12,163,12,0.12);
-    --dont-bg: rgba(208,59,59,0.12);
+    --dont-bg: rgba(208,59,59,0.12);${tokenVars('dark').replace(/\n/g, '\n  ')}
   }
 }
 :root[data-theme="dark"] {${tokenBlock('dark')}
   --do-bg: rgba(12,163,12,0.12);
-  --dont-bg: rgba(208,59,59,0.12);
+  --dont-bg: rgba(208,59,59,0.12);${tokenVars('dark')}
 }
 
 * { box-sizing: border-box; }
@@ -230,7 +257,10 @@ h2 { font-size: 17px; margin: 40px 0 6px; letter-spacing: -0.005em; }
 #pop .pop-row .k { color: var(--text-secondary); }
 #pop .pop-row .v { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; text-align: right; }
 #pop .pop-note { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
-${SHELL_STYLES}
+#pop .pop-source { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--grid); font-size: 12px; }
+#pop .pop-source .ref-link { font-size: 12px; }
+#pop .pop-source code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-secondary); overflow-wrap: anywhere; }
+${HIGHLIGHT_STYLES}${SHELL_STYLES}
 ${NAV_STYLES}
 @media (max-width: 760px) {
   .pair, .setup-code { grid-template-columns: 1fr; }
@@ -258,8 +288,8 @@ ${SPEC_URL ? `    <p class="sub"><a class="ref-link" href="${esc(SPEC_URL)}" tar
       fixture, and the page object hands out locators rather than elements - which is itself the first pattern.
     </p>
     <div class="setup-code">
-      <pre><code>${esc(setup.constants ?? '')}</code></pre>
-      <pre><code>${esc(setup['page-object'] ?? '')}</code></pre>
+      <pre><code>${highlightTs(setup.constants ?? '')}</code></pre>
+      <pre><code>${highlightTs(setup['page-object'] ?? '')}</code></pre>
     </div>
   </section>
 
@@ -297,7 +327,18 @@ function proofHtml(id) {
       : 'Both forms run against the same page, in the same test.') + '</div>' +
     '<div class="pop-rows">' + rows + '</div>' +
     facts +
-    '<div class="pop-note">' + esc(p.note || '') + '<br>' + esc(p.url) + '</div>';
+    '<div class="pop-note">' + esc(p.note || '') + '<br>' + esc(p.url) + '</div>' +
+    sourceHtml(p);
+}
+
+// Where the proof came from: the test that ran both forms and recorded the result.
+function sourceHtml(p) {
+  if (!p.source) return '';
+  const where = p.source.href
+    ? '<a class="ref-link" href="' + esc(p.source.href) + '" target="_blank" rel="noopener">See the proof: the test that recorded this &rarr;</a>'
+    : 'Proof recorded by:';
+  return '<div class="pop-source">' + where + '<br><code>' + esc(p.test || '') + '</code><br><code>' +
+    esc(p.source.label) + '</code></div>';
 }
 
 document.addEventListener('click', (e) => {
