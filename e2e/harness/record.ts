@@ -1,6 +1,6 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { RESULTS_DIR, RUN_ID } from './paths';
+import { RUN_ID, resultsDirFor } from './paths';
 
 /**
  * One measurement. Raw per-repetition samples are kept rather than summary
@@ -39,19 +39,22 @@ export interface BenchRecord {
   readonly dims: Record<string, string | number | boolean>;
 }
 
-let stream: string | null = null;
+const streams = new Map<string, string>();
 
-function target(): string {
-  if (stream) return stream;
-  mkdirSync(RESULTS_DIR, { recursive: true });
+function target(scenario: string): string {
+  const dir = resultsDirFor(scenario);
+  const known = streams.get(dir);
+  if (known) return known;
+  mkdirSync(dir, { recursive: true });
   const worker = process.env.TEST_WORKER_INDEX ?? '0';
-  stream = join(RESULTS_DIR, `${RUN_ID}-w${worker}.ndjson`);
+  const stream = join(dir, `${RUN_ID}-w${worker}.ndjson`);
+  streams.set(dir, stream);
   return stream;
 }
 
 /** Append-only, one JSON object per line, one file per worker: no interleaving. */
 export function emit(record: BenchRecord): void {
-  appendFileSync(target(), JSON.stringify(record) + '\n');
+  appendFileSync(target(record.scenario), JSON.stringify(record) + '\n');
 }
 
 export function makeRecord(

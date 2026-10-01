@@ -9,11 +9,11 @@
  *  - Report the speed weight the data justifies rather than one chosen in advance.
  */
 import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { bootstrapMedianCI, compare, quantile, summarise } from './stats.mjs';
 
 const RAW_DIR = resolve(process.env.BM_RESULTS_DIR ?? 'results/raw');
-const OUT = resolve('results/summary.json');
+const OUT = resolve(process.env.BM_SUMMARY ?? 'results/summary.json');
 
 /** The strategy every other strategy is measured against: the cheapest possible query. */
 const REFERENCE = 'id.css';
@@ -130,7 +130,10 @@ function selectRun({ records, envs }) {
 function dimsKey(r) {
   const d = r.dims ?? {};
   const parts = [r.scenario, r.route];
-  for (const k of ['tier', 'position', 'cards', 'hz', 'trackby', 'lateMode', 'encapsulation', 'mutation', 'virtual', 'failureMode', 'op']) {
+  // requestedDepth and level separate the S12 and S15 page shapes. Without them
+  // every S12 depth shared one key: one noise floor, and comparisons made against
+  // whichever depth's reference record was found first.
+  for (const k of ['part', 'tier', 'requestedDepth', 'level', 'position', 'cards', 'hz', 'trackby', 'lateMode', 'encapsulation', 'mutation', 'virtual', 'failureMode', 'op']) {
     if (d[k] !== undefined) parts.push(`${k}=${d[k]}`);
   }
   return parts.join('|');
@@ -467,6 +470,55 @@ function main() {
     };
   }
 
+  // --- S15: the same strategy on the depth-50 page and the shallow control -----
+  //
+  // Both pages carry the same number of elements, so this is the one comparison
+  // that answers "what did depth cost". Tested rather than eyeballed: the two
+  // medians go through the same test and the same floor as every other claim,
+  // the floor being the larger of the two pages' own.
+  const depthContrast = [];
+  const s15 = cells.filter((c) => c.scenario === 'S15' && c.n > 0 &&
+    ['query', 'click'].includes(c.dims?.part));
+  const depths = [...new Set(s15.map((c) => c.dims.requestedDepth))].sort((a, b) => a - b);
+  if (depths.length === 2) {
+    const [lo, hi] = depths;
+    for (const deep of s15.filter((c) => c.dims.requestedDepth === hi)) {
+      const shallow = s15.find((c) => c.dims.requestedDepth === lo &&
+        c.strategyId === deep.strategyId && c.metric === deep.metric && c.dims.part === deep.dims.part);
+      if (!shallow) continue;
+      const floor = Math.max(deep.noiseFloor ?? 0, shallow.noiseFloor ?? 0);
+      const cmp = compare(rebuildSeries(records, deep), rebuildSeries(records, shallow), floor);
+      depthContrast.push({
+        drift: null,
+        part: deep.dims.part,
+        metric: deep.metric,
+        strategyId: deep.strategyId,
+        family: deep.family,
+        shallowDepth: lo,
+        deepDepth: hi,
+        shallow: { median: shallow.stats.median, p95: shallow.stats.p95, n: shallow.n, probeOnly: shallow.probeOnly, domNodes: shallow.domNodes, targetDepth: shallow.dims.targetDepth },
+        deep: { median: deep.stats.median, p95: deep.stats.p95, n: deep.n, probeOnly: deep.probeOnly, domNodes: deep.domNodes, targetDepth: deep.dims.targetDepth },
+        noiseFloor: floor,
+        ...cmp,
+      });
+    }
+
+    // The two pages are measured in separate tests, minutes apart, and the
+    // paired baseline only cancels what the baseline query itself pays. The
+    // reference locator does the same trivial work on both pages, so whatever
+    // it moved by is run drift, not depth - measured at 1.6 ms for first-match
+    // resolution on the first run of this scenario, where every cheap locator
+    // then read as "faster when deep". A difference no larger than the
+    // reference's own shift is not attributed to depth.
+    for (const x of depthContrast) {
+      const ref = depthContrast.find((r) => r.strategyId === REFERENCE && r.metric === x.metric && r.part === x.part);
+      x.drift = ref ? Math.abs(ref.medianDelta) : null;
+      // The reference is the drift; it cannot be measured against itself.
+      x.withinDrift = x.strategyId === REFERENCE ||
+        (x.drift !== null && Math.abs(x.medianDelta) <= x.drift + x.noiseFloor);
+    }
+  }
+
   // --- mechanism: what work a query causes, not how long it takes ------------
   const mechanism = {};
   for (const r of records) {
@@ -510,6 +562,7 @@ function main() {
     slowDepthProfile,
     slowByStrategy,
     depthSweep,
+    depthContrast,
     mechanism,
     cells,
     comparisons,
@@ -521,7 +574,7 @@ function main() {
     composite,
   };
 
-  mkdirSync(resolve('results'), { recursive: true });
+  mkdirSync(dirname(OUT), { recursive: true });
   writeFileSync(OUT, JSON.stringify(summary, null, 2));
   report(summary);
 }

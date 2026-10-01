@@ -41,6 +41,7 @@ failure cost, then ranks on a composite.
 | S12 | Depth at fixed element count | Does depth cost anything on its own? |
 | S13 | Accessibility | What do the expensive locators buy that the cheap ones cannot? |
 | S14 | Composition patterns | How do locators behave in fixtures, chains and assertions? |
+| S15 | Depth 50 at ~5,000 elements | What does every locator — query, click, and refactor — do fifty levels down? |
 
 31 locator strategies across eight families, all resolving to the **same physical
 element** — the descriptor is read back out of the rendered DOM, so the spec
@@ -68,6 +69,7 @@ npm run bench:micro        # S1, S2, S7, S12
 npm run bench:macro        # S3, S4, S8, S9, S10
 npm run bench:a11y         # S13
 npm run bench:patterns     # S14, writes results/composition.json
+npm run bench:deep         # S15, writes results/deep-raw (its own stream)
 npx playwright test --project=robustness   # S5, S6
 node tools/run-suite-scale.mjs             # S11
 
@@ -75,6 +77,8 @@ npm run report             # aggregate + both pages + both generated documents
 npm run reference          # regenerate the locator reference on its own
 npm run accessibility-page # regenerate the test-level matrix page on its own
 npm run patterns-page      # regenerate the composition patterns page on its own
+npm run analyze:deep       # results/deep-raw -> results/deep-summary.json
+npm run deep-page          # regenerate the depth-50 page on its own
 npm run matrix-doc         # regenerate the matrix table inside the document
 npm run composition-doc    # regenerate docs/LOCATOR-COMPOSITION.md
 npm run verify:pages       # open both generated pages in a browser and check them
@@ -171,6 +175,38 @@ control is still 800 ms away, `all()` handing back positions that no longer hold
 The examples on the page and in
 [docs/LOCATOR-COMPOSITION.md](docs/LOCATOR-COMPOSITION.md) are extracted from the
 scenario source between markers, so what is published is the code that ran.
+
+## Fifty levels deep
+
+S15 runs the matrix against one page shape: 50 component levels (the target sits
+107 elements below `<body>`) and about 5,200 elements. Each figure has a 5-level
+control with exactly the same 5,100 filler buttons next to it, measured in the
+same run. Results live on their own page, `results/dashboard/deep.html`.
+
+| | depth 5 | depth 50 | |
+|---|---|---|---|
+| `chained.locator`, count | 25 ms | **796 ms** | 31× |
+| `css.has` / `css.chain.full` / `filter.has` | 1.1 / 0.9 / 1.8 ms | 4.6 / 3.8 / 4.6 ms | 2.5–4× |
+| `role.name` / `text.locator` | 36 / 14 ms | 43 / 17 ms | 1.2× |
+| `getByTestId`, `#id`, XPath | below the 0.13 ms floor | below the floor | none |
+| A whole click, 9 strategies | 48.9 ms median | 50.0 ms median | 8 of 9 not significant |
+
+What depth does change is scoping. Narrowing to the nearest test-id container
+before `getByRole` only helps when that container is small, and on a nested page a
+container holds every level below it. On the same page, `scoped.role` costs 38 ms
+when the target is at level 1 (5,149 elements in scope) and **2.1 ms** at level 50
+(102 in scope). Unscoped `role.name` stays at 38–43 ms the whole way down.
+
+Robustness at depth 50 matches S6. `wrap` breaks the absolute chains, and
+`reorder` makes `xpath.absolute` and `role.bare.nth` **silently resolve to the
+wrong element**.
+
+Two corrections came out of building this. The deep route spreads `fill` over
+`depth + 1` levels, so passing the same `fill` at two depths does not hold the
+element count. S12 has that flaw (7,235 vs 6,245 elements); S15 uses an adjusted
+`fill` per depth. The two S15 pages are also measured minutes apart, so a depth
+verdict also has to beat the shift of `id.css` itself between them. Without that
+check, ~1.6 ms of run drift read as every cheap locator getting faster with depth.
 
 ## Methodology
 
@@ -302,10 +338,12 @@ app/                Angular 22 subject application (Material + CDK)
 docs/               generated locator reference and composition patterns, accessibility guidance
 e2e/harness/        measurement primitives, fixtures, env capture, record emitter
 e2e/locators/       the strategy matrix and the DOM descriptor
-e2e/micro|macro|robustness|a11y|patterns|suite/   the scenarios
+e2e/micro|macro|robustness|a11y|patterns|deep|suite/   the scenarios
 analysis/           aggregation, statistics, dashboard generation
 tools/              static server, S11 driver
 results/raw/        append-only NDJSON, one file per worker per run
 results/composition.json   S14 proofs, kept out of the raw stream on purpose
+results/deep-raw/    S15 NDJSON, kept apart so an S15-only run cannot replace summary.json
+results/deep-summary.json  S15 aggregate the depth-50 page is built from
 results/dashboard/  generated HTML
 ```

@@ -48,7 +48,7 @@ async function checkNav(page, tag, file, w, h, { toc }) {
   const current = await page.locator('.site-nav a[aria-current="page"]').first().getAttribute('href');
   if (current !== file) problems.push(`${tag}: site bar marks ${current} as current, expected ${file}`);
   const hrefs = await page.locator('.site-nav a, #siteMenu a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
-  for (const want of ['index.html', 'accessibility.html', 'patterns.html']) {
+  for (const want of ['index.html', 'deep.html', 'accessibility.html', 'patterns.html']) {
     if (!hrefs.includes(want)) problems.push(`${tag}: no site link to ${want} (${hrefs})`);
   }
 
@@ -275,6 +275,35 @@ for (const [w, h, theme] of [[1280, 900, 'light'], [390, 780, 'dark']]) {
   if (process.env.BM_SHOT && w === 1280) {
     await page.screenshot({ path: `${process.env.BM_SHOT}/patterns-${theme}.png`, fullPage: true });
   }
+  await ctx.close();
+}
+
+// --- depth-50 page -----------------------------------------------------------
+// Built from the committed results/deep-summary.json. Every chart it draws must
+// be there, the metric toggle must redraw rather than blank the chart, and the
+// strategy chips in its tables must open the same popover as the results page.
+for (const [w, h, theme] of [[1280, 900, 'light'], [390, 780, 'dark']]) {
+  const tag = `deep ${w} ${theme}`;
+  const { ctx, page } = await check(`${out}/deep.html`, w, h, theme, tag);
+  const sections = await page.locator('#sections section').count();
+  if (sections < 5) problems.push(`${tag}: only ${sections} sections rendered, expected 5 and a glossary`);
+  const charts = await page.locator('#sections section svg').count();
+  if (charts < 5) problems.push(`${tag}: only ${charts} charts rendered`);
+  const tiles = await page.locator('#tiles .tile').count();
+  if (tiles !== 5) problems.push(`${tag}: ${tiles} stat tiles, expected 5`);
+  const dots = () => page.locator('#sections section').first().locator('svg circle').count();
+  const before = await dots();
+  await page.locator('input[name="dq-metric"][value="resolve_first_ms"]').check();
+  const after = await dots();
+  if (!before || after !== before) problems.push(`${tag}: metric toggle changed the dot count ${before} -> ${after}`);
+  const chip = page.locator('#sections [data-strategy]').first();
+  await chip.scrollIntoViewIfNeeded().catch(() => {});
+  if (await chip.isVisible()) {
+    await chip.click();
+    if (!(await page.locator('#pop').isVisible())) problems.push(`${tag}: strategy popover did not open`);
+    await page.keyboard.press('Escape');
+  }
+  await checkNav(page, tag, 'deep.html', w, h, { toc: true });
   await ctx.close();
 }
 

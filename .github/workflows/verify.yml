@@ -56,11 +56,13 @@ jobs:
       # copy and a fresh one legitimately differ and cannot be compared. The dashboard is checked as
       # committed, since rebuilding it needs a benchmark run. Chromium only - these
       # are static pages and a second engine would double the install for nothing.
+      # The depth-50 page is rebuilt from the committed results/deep-summary.json.
       - name: Generated pages render, and their popovers behave
         run: |
           npx playwright install --with-deps chromium
           npm run accessibility-page
           npm run patterns-page
+          npm run deep-page
           npm run verify:pages
 
       - name: Strategy reference regenerates and matches what is committed
