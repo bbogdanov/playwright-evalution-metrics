@@ -513,7 +513,9 @@ function main() {
     for (const x of depthContrast) {
       const ref = depthContrast.find((r) => r.strategyId === REFERENCE && r.metric === x.metric && r.part === x.part);
       x.drift = ref ? Math.abs(ref.medianDelta) : null;
-      x.withinDrift = x.drift !== null && x.strategyId !== REFERENCE && Math.abs(x.medianDelta) <= x.drift + x.noiseFloor;
+      // The reference is the drift; it cannot be measured against itself.
+      x.withinDrift = x.strategyId === REFERENCE ||
+        (x.drift !== null && Math.abs(x.medianDelta) <= x.drift + x.noiseFloor);
     }
   }
 

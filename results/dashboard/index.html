@@ -216,6 +216,9 @@ summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
   font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 4px;
 }
 #pop .pop-close:hover { color: var(--text-primary); }
+#pop .pop-source { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--grid); font-size: 12px; }
+#pop .pop-source .ref-link { font-size: 12px; }
+#pop .pop-source code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-secondary); overflow-wrap: anywhere; }
 .ref-link {
   font-size: 12.5px;
   color: var(--series-1);
@@ -316,7 +319,7 @@ h2:hover .heading-anchor, .heading-anchor:focus-visible { opacity: 1; }
 <a class="skip-link" href="#main">Skip to content</a>
 <nav class="site-nav" aria-label="Site">
   <span class="site-brand">Locator benchmark</span>
-  <span class="site-pages"><a href="index.html" aria-current="page">Results</a><a href="accessibility.html">Accessibility</a><a href="patterns.html">Patterns</a></span>
+  <span class="site-pages"><a href="index.html" aria-current="page">Results</a><a href="deep.html">Depth 50</a><a href="accessibility.html">Accessibility</a><a href="patterns.html">Patterns</a></span>
   <span class="site-sep" aria-hidden="true"></span><a class="site-ext" href="playwright-report/index.html" title="Playwright run report: every test, timing and failure">Run report <span aria-hidden="true">↗</span></a><a class="site-ext" href="https://github.com/bbogdanov/playwright-evalution-metrics/blob/main/docs/LOCATOR-REFERENCE.md" title="Locator reference: what every strategy actually executes" target="_blank" rel="noopener">Reference <span aria-hidden="true">↗</span></a>
   <span class="site-spacer"></span>
   <button class="site-menu-btn" type="button" aria-expanded="false" aria-controls="siteMenu">Results <span class="site-menu-sections">· Sections</span> <span aria-hidden="true">▾</span></button>
@@ -325,6 +328,7 @@ h2:hover .heading-anchor, .heading-anchor:focus-visible { opacity: 1; }
 <div class="site-menu" id="siteMenu" hidden>
   <div class="site-menu-grp">Pages</div>
   <a href="index.html" aria-current="page">Results</a>
+  <a href="deep.html">Depth 50</a>
   <a href="accessibility.html">Accessibility</a>
   <a href="patterns.html">Patterns</a>
   <div class="site-menu-grp site-menu-toc-head" hidden>On this page</div>

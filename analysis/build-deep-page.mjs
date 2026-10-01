@@ -50,8 +50,10 @@ function specLink(p) {
   const u = S.specUrls && S.specUrls[p];
   return u ? ' <a class="ref-link" href="' + esc(u) + '" target="_blank" rel="noopener">Test source ↗</a>' : '';
 }
+// Medians at or near zero are below anything this harness resolves; the axis
+// stops at 1 µs and its first tick says so rather than printing 0.000 ms.
 function logAxis(lo, hi) {
-  const a = Math.floor(Math.log10(Math.max(lo, 1e-4)));
+  const a = Math.floor(Math.log10(Math.max(lo, 1e-3)));
   const b = Math.ceil(Math.log10(Math.max(hi, lo * 10)));
   return [a, Math.max(b, a + 1)];
 }
@@ -92,9 +94,9 @@ function logAxis(lo, hi) {
       n: 'Strategies, count(), against the [[noise-floor|floor]]',
     },
     {
-      k: 'Median click, depth 5 → 50',
-      v: clicks.length ? fmtMs(clickMed('shallow')) + ' → ' + fmtMs(clickMed('deep')) : '-',
-      n: clicks.length + ' strategies, scrolled from the top each time',
+      k: 'Click, depth 5 → 50',
+      v: clicks.length ? clickMed('shallow').toFixed(1) + ' → ' + clickMed('deep').toFixed(1) + ' ms' : '-',
+      n: 'Median of ' + clicks.length + ' strategies\' medians; ' + clicks.filter((x) => verdictOf(x) !== 'same').length + ' differ measurably',
     },
   ];
   document.getElementById('tiles').innerHTML = tiles
@@ -110,6 +112,7 @@ function logAxis(lo, hi) {
   const sec = section(
     'Every strategy at depth 50, against the same page five levels deep',
     'One dot pair per strategy. Both pages carry the same number of elements; only the [[depth|nesting]] differs, so the gap between the two dots is what depth costs that locator. [[median|Median]] net query cost, [[log-scale|log scale]]. The shaded band is the [[noise-floor|measurement floor]]: anything inside it is as fast as anything this harness can measure. ' +
+    'First-match figures carry a round trip the paired baseline does not cancel (about 5 ms each), so differences of a millisecond or two there are worth little. ' +
     'A gap is called a difference only when it clears the floor, the [[p-value|significance test]], <em>and</em> the drift of <code>id.css</code> between the two pages — the two are measured minutes apart, and a shift the reference locator shows too is the run moving, not depth. Otherwise it is labelled as none, however it looks.' + specLink('query')
   );
 
@@ -128,7 +131,7 @@ function logAxis(lo, hi) {
     '<span><span class="sw" style="background:var(--text-muted)"></span>5 levels (control)</span>' +
     '<span><span class="sw" style="background:var(--series-1)"></span>50 levels</span>' +
     '<span><span class="sw" style="background:var(--grid)"></span>below the measurement floor</span>' +
-    '<span>right-hand column: depth 50 ÷ depth 5, or "≈" when no difference is measurable</span>';
+    '<span>right-hand column: depth 50 ÷ depth 5 (a difference in ms where the control is at the floor), or "≈" when no difference is measurable</span>';
   sec.appendChild(legend);
 
   function draw(metric) {
@@ -148,7 +151,7 @@ function logAxis(lo, hi) {
       const x = X(Math.pow(10, e));
       svg.appendChild(svgEl('line', { x1: x, x2: x, y1: padT - 6, y2: padT + rows.length * rowH, class: 'gridline' }));
       const tk = svgEl('text', { x, y: padT + rows.length * rowH + 16, class: 'tick', 'text-anchor': 'middle' });
-      tk.textContent = fmtMs(Math.pow(10, e));
+      tk.textContent = (e === e0 ? '≤ ' : '') + fmtMs(Math.pow(10, e));
       svg.appendChild(tk);
     }
 
@@ -167,7 +170,12 @@ function logAxis(lo, hi) {
       g.appendChild(svgEl('circle', { cx: xd, cy: y, r: 5, fill: 'var(--series-1)', stroke: 'var(--surface-1)', 'stroke-width': 1.5 }));
       const ratio = x.shallow.median > 0 ? x.deep.median / x.shallow.median : null;
       const lab = svgEl('text', { x: w - padR + 12, y: y + 4, class: v === 'same' ? 'tick' : 'lbl-strong' });
-      lab.textContent = v === 'same' ? '≈' : (ratio === null ? '-' : (ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)) + '×');
+      // A ratio against a median at the floor is a division by noise; the
+      // difference in milliseconds is the honest figure there.
+      const atFloor = x.shallow.median <= x.noiseFloor;
+      lab.textContent = v === 'same' ? '≈'
+        : atFloor || ratio === null ? (x.medianDelta > 0 ? '+' : '') + fmtMs(x.medianDelta)
+        : (ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)) + '×';
       g.appendChild(lab);
       hoverable(g,
         '<b>' + esc(x.strategyId) + '</b> <span class="m">· ' + esc(x.family) + '</span><br>' +
@@ -237,7 +245,7 @@ function logAxis(lo, hi) {
     const y = Y(Math.pow(10, e));
     svg.appendChild(svgEl('line', { x1: padL, x2: padL + plotW, y1: y, y2: y, class: 'gridline' }));
     const tk = svgEl('text', { x: padL - 9, y: y + 4, class: 'tick', 'text-anchor': 'end' });
-    tk.textContent = fmtMs(Math.pow(10, e));
+    tk.textContent = (e === e0 ? '≤ ' : '') + fmtMs(Math.pow(10, e));
     svg.appendChild(tk);
   }
   for (const l of levels) {
@@ -313,7 +321,7 @@ function logAxis(lo, hi) {
     const y = Y(Math.pow(10, e));
     svg.appendChild(svgEl('line', { x1: padL, x2: padL + plotW, y1: y, y2: y, class: 'gridline' }));
     const tk = svgEl('text', { x: padL - 9, y: y + 4, class: 'tick', 'text-anchor': 'end' });
-    tk.textContent = fmtMs(Math.pow(10, e));
+    tk.textContent = (e === e0 ? '≤ ' : '') + fmtMs(Math.pow(10, e));
     svg.appendChild(tk);
   }
   const maxScope = Math.max(...levels.map((l) => get(pairs[0][0], l).dims.scopeSize || 0), 1);
@@ -334,7 +342,7 @@ function logAxis(lo, hi) {
     hoverable(g, '<b>level ' + l + '</b><br><span class="m">' + size.toLocaleString() + ' elements inside the scope container</span>');
     svg.appendChild(g);
   }
-  const cap = svgEl('text', { x: padL - 9, y: barTop + barH + 14, class: 'tick', 'text-anchor': 'end' });
+  const cap = svgEl('text', { x: padL - 30, y: barTop + barH / 2 + 4, class: 'tick', 'text-anchor': 'end' });
   cap.textContent = 'in scope';
   svg.appendChild(cap);
 
@@ -381,7 +389,7 @@ function logAxis(lo, hi) {
   const sec = section(
     'What a whole click costs at depth 50',
     'Query cost is only the first step of an action: Playwright then scrolls the element into view, waits for it to be visible, stable and enabled, hit-tests it and dispatches the events. Every repetition here starts scrolled to the top, so it pays the scroll a real test would. Bars are [[median|medians]] of ' +
-    rows[0].deep.n + ' clicks, whiskers the [[p95|p95]]; each strategy was proved to land on the leaf through the app\'s own action log.' + specLink('click')
+    rows[0].deep.n + ' clicks, whiskers the p95; each strategy was proved to land on the leaf through the app\'s own action log.' + specLink('click')
   );
   const vals = rows.flatMap((x) => [x.deep.p95, x.shallow.p95, x.deep.median, x.shallow.median]).filter(Number.isFinite);
   const max = Math.max(...vals) * 1.08;
