@@ -34,7 +34,7 @@ const problems = [];
 // cannot resolve.
 const withApp = existsSync(resolve(out, 'app/index.html'));
 if (withApp) {
-  const routes = [...readFileSync('app/src/app/app.routes.ts', 'utf8').matchAll(/path:\s*'([a-z0-9-]+)'/g)].map((m) => m[1]);
+  const routes = [...new Set([...readFileSync('app/src/app/app.routes.ts', 'utf8').matchAll(/path:\s*'([a-z0-9-]+)'/g)].map((m) => m[1]))];
   for (const r of routes) {
     if (!existsSync(resolve(out, 'app', r, 'index.html'))) problems.push(`app: no entry for /${r}, a reload there would 404`);
   }
@@ -61,7 +61,7 @@ async function checkNav(page, tag, file, w, h, { toc }) {
   const current = await page.locator('.site-nav a[aria-current="page"]').first().getAttribute('href');
   if (current !== file) problems.push(`${tag}: site bar marks ${current} as current, expected ${file}`);
   const hrefs = await page.locator('.site-nav a, #siteMenu a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
-  for (const want of ['index.html', 'deep.html', 'accessibility.html', 'patterns.html', ...(withApp ? ['app/'] : [])]) {
+  for (const want of ['index.html', 'deep.html', 'accessibility.html', 'patterns.html', ...(withApp ? ['app/?ui=rich'] : [])]) {
     if (!hrefs.includes(want)) problems.push(`${tag}: no site link to ${want} (${hrefs})`);
   }
 

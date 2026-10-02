@@ -42,7 +42,7 @@ const target = join(dashboard, 'app');
 rmSync(target, { recursive: true, force: true });
 cpSync(browser, target, { recursive: true });
 
-const routes = [...readFileSync('app/src/app/app.routes.ts', 'utf8').matchAll(/path:\s*'([a-z0-9-]+)'/g)].map((m) => m[1]);
+const routes = [...new Set([...readFileSync('app/src/app/app.routes.ts', 'utf8').matchAll(/path:\s*'([a-z0-9-]+)'/g)].map((m) => m[1]))];
 for (const r of routes) {
   mkdirSync(join(target, r), { recursive: true });
   cpSync(join(target, 'index.html'), join(target, r, 'index.html'));

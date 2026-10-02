@@ -240,7 +240,7 @@ export function siteNav(current, outDir) {
   }
   // Only present in the published site, where the deploy builds it in.
   if (existsSync(resolve(outDir, 'app/index.html'))) {
-    external.push({ href: 'app/', label: 'Application', title: 'The Angular application under test, live', newTab: false });
+    external.push({ href: 'app/?ui=rich', label: 'Application', title: 'The Angular application under test, live (Material showcase; each page links its benchmark DOM)', newTab: false });
   }
   const reference = blobUrl('docs/LOCATOR-REFERENCE.md');
   if (reference) {

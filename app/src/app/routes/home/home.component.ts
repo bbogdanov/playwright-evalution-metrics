@@ -2,11 +2,25 @@ import { ChangeDetectionStrategy, Component, afterRenderEffect, inject } from '@
 import { RouterLink } from '@angular/router';
 import { Ready } from '../../core/ready.service';
 
-interface RouteInfo {
+export interface RouteInfo {
   readonly path: string;
   readonly query: string;
   readonly stresses: string;
 }
+
+/** The benchmark routes, also listed by the rich home page. */
+export const BENCH_ROUTES: readonly RouteInfo[] = [
+  { path: 'grid', query: 'rows=200&cols=8', stresses: 'Flat DOM scale, native table roles (S1, S2)' },
+  { path: 'deep', query: 'depth=30&fill=6000', stresses: 'Depth at fixed element count (S12)' },
+  { path: 'churn', query: 'rows=300&hz=30&trackby=1', stresses: 'Re-resolution under continuous re-render (S3)' },
+  { path: 'late', query: 'delay=800&lateMode=append&rows=400', stresses: 'Actionability gates and polling cost (S4)' },
+  { path: 'ambiguous', query: 'dup=400', stresses: 'Strict-mode collisions and scoping (S5)' },
+  { path: 'forms', query: 'fields=300', stresses: 'Label/placeholder association cost (S1)' },
+  { path: 'shadow', query: 'enc=shadow&rows=60&cols=8', stresses: 'Shadow DOM piercing, encapsulation cost (S7)' },
+  { path: 'virtual', query: 'rows=20000&virtual=1', stresses: 'Target not in DOM, scroll-and-retry (S9)' },
+  { path: 'material', query: 'dup=30&cols=6&rows=200', stresses: 'CDK overlays and portals, real ARIA roles (S8)' },
+  { path: 'a11y', query: 'rows=20&defects=1', stresses: 'Accessibility defects the fast locators cannot see (S13)' },
+];
 
 /** Human-facing index. Not itself a benchmark surface. */
 @Component({
@@ -46,18 +60,7 @@ interface RouteInfo {
 export class HomeComponent {
   private readonly ready = inject(Ready);
 
-  protected readonly routes: RouteInfo[] = [
-    { path: 'grid', query: 'rows=200&cols=8', stresses: 'Flat DOM scale, native table roles (S1, S2)' },
-    { path: 'deep', query: 'depth=30&fill=6000', stresses: 'Depth at fixed element count (S12)' },
-    { path: 'churn', query: 'rows=300&hz=30&trackby=1', stresses: 'Re-resolution under continuous re-render (S3)' },
-    { path: 'late', query: 'delay=800&lateMode=append&rows=400', stresses: 'Actionability gates and polling cost (S4)' },
-    { path: 'ambiguous', query: 'dup=400', stresses: 'Strict-mode collisions and scoping (S5)' },
-    { path: 'forms', query: 'fields=300', stresses: 'Label/placeholder association cost (S1)' },
-    { path: 'shadow', query: 'enc=shadow&rows=60&cols=8', stresses: 'Shadow DOM piercing, encapsulation cost (S7)' },
-    { path: 'virtual', query: 'rows=20000&virtual=1', stresses: 'Target not in DOM, scroll-and-retry (S9)' },
-    { path: 'material', query: 'dup=30&cols=6&rows=200', stresses: 'CDK overlays and portals, real ARIA roles (S8)' },
-    { path: 'a11y', query: 'rows=20&defects=1', stresses: 'Accessibility defects the fast locators cannot see (S13)' },
-  ];
+  protected readonly routes = BENCH_ROUTES;
 
   protected parse(query: string): Record<string, string> {
     return Object.fromEntries(new URLSearchParams(query).entries());

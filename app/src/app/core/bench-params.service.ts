@@ -54,6 +54,9 @@ export class BenchParams {
    * default, which leaves the S12 page exactly as it was.
    */
   readonly levelTargets = computed(() => this.flag('levelTargets', false));
+  /** Rich nesting page only: generated elements per node, and the node budget. */
+  readonly items = computed(() => clamp(this.num('items', 3), 0, 24));
+  readonly nodes = computed(() => clamp(this.num('nodes', 400), 1, 20_000));
 
   // --- Render behaviour ----------------------------------------------------
   /** Mutation frequency in Hz for the churn route. 0 disables churn. */
