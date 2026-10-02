@@ -25,6 +25,7 @@
     "bench:deep": "BM_HTML_REPORT=results/.partial-report playwright test --project=deep",
     "accessibility-page": "node analysis/build-accessibility-page.mjs",
     "matrix-doc": "node analysis/a11y-matrix-doc.mjs",
+    "test:ui": "playwright test -c playwright.ui.config.ts",
     "verify:pages": "node tools/verify-pages.mjs",
     "patterns-page": "node analysis/build-patterns-page.mjs",
     "deep-page": "node analysis/build-deep-page.mjs",

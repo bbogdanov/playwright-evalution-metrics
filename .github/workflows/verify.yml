@@ -69,6 +69,11 @@ jobs:
           npm run dashboard
           npm run verify:pages
 
+      # The ?ui=rich showcase: sorting, filtering and tree generation, plus a guard
+      # that the default routes render no part of it. Uses the build from above.
+      - name: Rich UI tests
+        run: npm run test:ui
+
       - name: Strategy reference regenerates and matches what is committed
         run: |
           npm run reference

@@ -330,6 +330,25 @@ pages are regenerated in the deploy so they pick up the link; their inputs are
 all committed, and without the app the regeneration is byte-identical to the
 committed pages.
 
+### The Material showcase (`?ui=rich`)
+
+Add `?ui=rich` to any route for a Material version of the app: a toolbar shell,
+`/grid` as a sortable, filterable, paginated table (numbers, currency,
+percentages and dates sort by value), and `/deep` as a generated tree of Material
+cards shaped by `depth` (1-60), `breadth` (children per node, 1-8), `items`
+(elements per node, 0-24) and `nodes` (node budget). The requested depth is always
+reached; the budget cuts breadth, filled level by level. The site bar's
+**Application** link opens this mode.
+
+It is opt-in so that nothing the benchmark measures changes. The rich pages are
+separate route components chosen by a `canMatch` guard, and the shell is
+bootstrapped instead of the default root only when the parameter is present, so
+without it the default routes render byte-identical HTML to the version the
+published results were taken on (checked on 13 route/parameter combinations,
+including mutations). The one cost is 4.2 kB (+1.6%) on the main bundle for the
+guard and route entries. `npm run test:ui` runs its tests (`e2e/ui`, its own
+config, so it never touches the benchmark's run fingerprint or published report).
+
 The workflow deliberately **does not run the benchmark**. GitHub-hosted runners are
 shared vCPUs with noisy neighbours, and this project's entire output is timing
 measurements; a CI run would produce numbers that look authoritative and are not
