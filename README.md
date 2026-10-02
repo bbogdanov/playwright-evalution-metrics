@@ -320,6 +320,16 @@ default `GITHUB_TOKEN` — creating a Pages site returns *Resource not accessibl
 integration* and needs a token with admin rights on the repository. The parameter
 is left in place because it is harmless once Pages is on.
 
+The deploy also builds the Angular application under test (`npm run app:pages`)
+into the site at `app/`, so every route can be opened and inspected live, and the
+site bar on every page links it as **Application**. The base href comes from the
+Pages base path, and each route gets its own `index.html` copy, because Pages has
+no rewrites and a reload on `app/grid` would otherwise 404. The build goes to
+`app/dist/pages`, never `app/dist/app`, which is what the benchmark serves. The
+pages are regenerated in the deploy so they pick up the link; their inputs are
+all committed, and without the app the regeneration is byte-identical to the
+committed pages.
+
 The workflow deliberately **does not run the benchmark**. GitHub-hosted runners are
 shared vCPUs with noisy neighbours, and this project's entire output is timing
 measurements; a CI run would produce numbers that look authoritative and are not
@@ -328,7 +338,8 @@ a known machine, committed with their hardware fingerprint, and published from
 there.
 
 `.github/workflows/verify.yml` covers what can be checked without timing anything:
-typecheck, app build, analysis scripts parse, and that the committed locator
+typecheck, app build, analysis scripts parse, that the generated pages (with the
+app built into the site, as the deploy does) render and link it, and that the committed locator
 reference still matches what the generator produces.
 
 ## Layout

@@ -26,23 +26,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Pages
+        id: pages
         uses: actions/configure-pages@v4
 
-      # Source is the generated dashboard directory rather than the repository
-      # root, so the published site root is the dashboard itself. Pointing Jekyll
-      # at ./ would publish the README and leave the dashboard at
-      # /results/dashboard/.
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
+      - uses: actions/setup-node@v7
         with:
-          source: ./results/dashboard
-          destination: ./_site
+          node-version-file: .nvmrc
+          cache: npm
 
+      - run: npm ci
+      - run: npm --prefix app ci
+
+      # The Angular app is published at <site>/app/ so the pages under test can be
+      # inspected live. base_path is "/<repo>" on a project site and "" on a custom
+      # domain, so the base href follows wherever Pages actually serves the site.
+      - name: Build the application into the site
+        env:
+          BM_APP_BASE: ${{ steps.pages.outputs.base_path }}/app/
+        run: npm run app:pages
+
+      # The site bar links the app only when app/index.html sits next to the page,
+      # so the pages are regenerated now that it does. Every input is committed and
+      # a regeneration without the app is byte-identical to the committed pages;
+      # nothing here re-runs the benchmark.
+      - name: Regenerate the pages with the application linked
+        run: |
+          npm run accessibility-page
+          npm run patterns-page
+          npm run deep-page
+          npm run dashboard
+
+      # Uploaded as is, without Jekyll: the pages and the app bundle are finished
+      # files, and Jekyll would only drop anything whose name starts with "_".
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./results/dashboard
 
   # Deployment job
   deploy:

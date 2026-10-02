@@ -9,6 +9,7 @@
   },
   "scripts": {
     "app:build": "npm --prefix app run build -- --configuration production",
+    "app:pages": "node tools/build-pages-app.mjs",
     "app:serve": "node tools/static-server.mjs",
     "bench": "playwright test",
     "bench:micro": "BM_HTML_REPORT=results/.partial-report playwright test --project=micro",
