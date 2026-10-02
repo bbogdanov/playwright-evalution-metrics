@@ -238,6 +238,10 @@ export function siteNav(current, outDir) {
   if (existsSync(resolve(outDir, 'playwright-report/index.html'))) {
     external.push({ href: 'playwright-report/index.html', label: 'Run report', title: 'Playwright run report: every test, timing and failure', newTab: false });
   }
+  // Only present in the published site, where the deploy builds it in.
+  if (existsSync(resolve(outDir, 'app/index.html'))) {
+    external.push({ href: 'app/', label: 'Application', title: 'The Angular application under test, live', newTab: false });
+  }
   const reference = blobUrl('docs/LOCATOR-REFERENCE.md');
   if (reference) {
     external.push({ href: reference, label: 'Reference', title: 'Locator reference: what every strategy actually executes', newTab: true });

@@ -5,6 +5,8 @@ app/.angular/
 results/raw/
 results/deep-raw/
 results/.partial-report/
+# Built into the site by the Pages deploy, never committed.
+results/dashboard/app/
 
 test-results/
 /playwright-report/

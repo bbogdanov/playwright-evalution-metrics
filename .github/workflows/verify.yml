@@ -53,16 +53,20 @@ jobs:
 
       # The matrix and patterns pages are rebuilt here rather than taken from the
       # repository: their links are derived from the current branch, so a committed
-      # copy and a fresh one legitimately differ and cannot be compared. The dashboard is checked as
-      # committed, since rebuilding it needs a benchmark run. Chromium only - these
+      # copy and a fresh one legitimately differ and cannot be compared. The dashboard is
+      # rebuilt from the committed results/summary.json so it links the app as well. Chromium only - these
       # are static pages and a second engine would double the install for nothing.
       # The depth-50 page is rebuilt from the committed results/deep-summary.json.
+      # The app is built into the site the way the Pages deploy does it, so a
+      # missing app link or route entry fails here rather than on the live site.
       - name: Generated pages render, and their popovers behave
         run: |
           npx playwright install --with-deps chromium
+          npm run app:pages
           npm run accessibility-page
           npm run patterns-page
           npm run deep-page
+          npm run dashboard
           npm run verify:pages
 
       - name: Strategy reference regenerates and matches what is committed
