@@ -1,6 +1,6 @@
 {
-  "runId": "20261002115310",
-  "generatedAt": "2026-10-02T12:51:47.027Z",
+  "runId": "20261002140525",
+  "generatedAt": "2026-10-02T14:40:33.774Z",
   "browserVersion": "141.0.7390.37",
   "proofs": {
     "fixture.handle": {
@@ -55,8 +55,8 @@
       "kind": "cost",
       "url": "/grid?rows=1500&cols=6&seed=bm-v1",
       "domNodes": 30034,
-      "doMs": 20.344572000205517,
-      "dontMs": 181.98658499959856,
+      "doMs": 2.710343499900773,
+      "dontMs": 185.2991945000831,
       "facts": {
         "role": "button",
         "name": "Status for row 750"
@@ -67,8 +67,8 @@
       "kind": "cost",
       "url": "/grid?rows=1500&cols=6&seed=bm-v1",
       "domNodes": 30034,
-      "doMs": 30.28234399948269,
-      "dontMs": 1680.4218760002404,
+      "doMs": 9.542474000249058,
+      "dontMs": 1640.0576590001583,
       "facts": {
         "chainSteps": 3,
         "broadFirstStep": 1500
@@ -79,8 +79,8 @@
       "kind": "cost",
       "url": "/grid?rows=1500&cols=6&seed=bm-v1",
       "domNodes": 30034,
-      "doMs": 26.738868998363614,
-      "dontMs": 107.53657250013202,
+      "doMs": 13.850455000065267,
+      "dontMs": 63.077178000006825,
       "facts": {
         "candidateRows": 1500
       }
@@ -113,11 +113,11 @@
       "kind": "correctness",
       "url": "/late?lateMode=append&delay=800&rows=200",
       "dont": "count() returned 0 while the control was still 800ms away",
-      "did": "toHaveCount(1) retried for 795ms and passed",
+      "did": "toHaveCount(1) retried for 799ms and passed",
       "facts": {
         "delayMs": 800,
         "countNow": 0,
-        "waitedMs": 795
+        "waitedMs": 799
       }
     },
     "wait.all": {
@@ -148,7 +148,7 @@
       "kind": "cost",
       "url": "/late?lateMode=append&delay=800&rows=200",
       "domNodes": 223,
-      "doMs": 799,
+      "doMs": 794,
       "dontMs": 3022,
       "facts": {
         "renderDelayMs": 800,
