@@ -1,7 +1,7 @@
 import { test as base, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { emit, makeRecord, type BenchRecord } from './record';
 import {
-  countDomNodes, measureInPageFloor, measureMechanism, measureNoiseFloor, measurePaired,
+  MAX_RUNS, countDomNodes, measureInPageFloor, measureMechanism, measureNoiseFloor, measurePaired,
   type MeasureOptions,
 } from './measure';
 import { describeTarget, type TargetDescriptor } from '../locators/describe';
@@ -80,8 +80,8 @@ export class Bench {
    * depends on how much work the browser is doing in the background, and a page
    * with 40,000 nodes is not as quiet as one with 200.
    */
-  async measureNoiseFloor(dims: Dims, reps = 200): Promise<number[]> {
-    const { deltas, samples } = await measureNoiseFloor(this.page, reps);
+  async measureNoiseFloor(dims: Dims): Promise<number[]> {
+    const { deltas, samples } = await measureNoiseFloor(this.page);
     this.emitRaw({
       strategyId: 'baseline.self', family: 'identity', metric: 'noise_floor_ms',
       dims, samples: deltas, matches: 1,
@@ -152,7 +152,8 @@ export class Bench {
       return { matches, net: [] };
     }
 
-    const paired = await measurePaired(this.page, locator, args.options);
+    // The count above was the first execution and serves as the warm-up.
+    const paired = await measurePaired(this.page, locator, { ...args.options, warmedUp: true });
     this.emit({
       strategy, metric,
       // budgetLimited and probeMs travel with the record so the analysis can see
@@ -167,7 +168,7 @@ export class Bench {
       samples: paired.samples, baseline: paired.baseline,
       ok: true, error: null,
       reps: paired.samples.length,
-      warmup: args.options?.warmup ?? 8,
+      warmup: 1,
     });
     return { matches, net: paired.net };
   }
@@ -185,7 +186,6 @@ export class Bench {
     strategy: Strategy,
     target: TargetDescriptor,
     dims: Dims,
-    queries = 10,
   ): Promise<void> {
     let locator: Locator;
     try {
@@ -193,7 +193,7 @@ export class Bench {
     } catch {
       return;
     }
-    const profile = await measureMechanism(this.page, locator, queries);
+    const profile = await measureMechanism(this.page, locator);
     if (!profile) return;
 
     this.emitRaw({
@@ -221,12 +221,16 @@ export class Bench {
   async measureFloor(strategy: Strategy, target: TargetDescriptor, dims: Dims): Promise<void> {
     const floor = strategy.floor?.(target);
     if (!floor) return;
-    const { perOpMs, matches } = await measureInPageFloor(this.page, floor.kind, floor.selector);
+    const { perOpMs, totalMs, matches } = await measureInPageFloor(this.page, floor.kind, floor.selector);
+    // Below the timer's resolution there is no number to report, only a bound.
     this.emit({
       strategy, metric: 'in_page_floor_ms',
-      dims: { ...dims, targetDepth: target.depth },
+      dims: { ...dims, targetDepth: target.depth, floorBatchMs: totalMs },
       matches,
-      samples: [perOpMs], baseline: null, ok: true, error: null, reps: 1, warmup: 0,
+      samples: perOpMs === null ? [] : [perOpMs], baseline: null,
+      ok: perOpMs !== null,
+      error: perOpMs === null ? `below timer resolution: ${MAX_RUNS - 1} runs took ${totalMs.toFixed(1)}ms` : null,
+      reps: 1, warmup: 1,
     });
   }
 

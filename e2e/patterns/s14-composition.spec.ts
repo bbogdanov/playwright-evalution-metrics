@@ -231,7 +231,7 @@ async function costPair(
   forms: { do: Locator; dont: Locator },
   facts?: Record<string, string | number | boolean>,
 ): Promise<{ doMs: number; dontMs: number }> {
-  const opts = { reps: 25, warmup: 5, budgetMs: 8_000 };
+  const opts = { budgetMs: 8_000 };
   const doPaired = await measurePaired(page, forms.do, opts);
   const dontPaired = await measurePaired(page, forms.dont, opts);
   const doMs = median(doPaired.net);

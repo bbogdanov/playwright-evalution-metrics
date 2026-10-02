@@ -1,5 +1,5 @@
 import { expect, test } from '../harness/fixtures';
-import { timeOnceSettled } from '../harness/measure';
+import { MAX_RUNS, timeOnceSettled } from '../harness/measure';
 import { BY_ID } from '../locators/strategies';
 import { MACRO_SET } from '../macro/macro-set';
 import { DEEP, FILLERS, SHALLOW, fillFor } from './shape';
@@ -18,7 +18,8 @@ import { DEEP, FILLERS, SHALLOW, fillFor } from './shape';
 
 test.use({ scenario: 'S15' });
 
-const REPS = 15;
+// One unrecorded warm-up click, the timed clicks, and one proof click: MAX_RUNS in all.
+const REPS = MAX_RUNS - 2;
 
 for (const depth of [SHALLOW, DEEP]) {
   test(`S15 click | depth=${depth} with ${FILLERS} fillers`, async ({ bench, page }) => {

@@ -17,7 +17,6 @@ test.use({ scenario: 'S2' });
 
 const ROWS = 1_500;
 const COLS = 6;
-const REPS = 25;
 
 const POSITIONS = [
   { name: 'first', row: 0 },
@@ -43,7 +42,7 @@ for (const pos of POSITIONS) {
     await bench.measureNoiseFloor(dims);
 
     for (const strategy of applicable(target)) {
-      await bench.measureStrategy({ strategy, target, dims, options: { reps: REPS } });
+      await bench.measureStrategy({ strategy, target, dims, });
     }
   });
 }
@@ -75,6 +74,6 @@ test('S2 scoping | container-scoped vs document-wide', async ({ bench, page }) =
   await bench.measureNoiseFloor(dims);
 
   for (const strategy of applicable(target)) {
-    await bench.measureStrategy({ strategy, target, dims, options: { reps: 30 } });
+    await bench.measureStrategy({ strategy, target, dims, });
   }
 });

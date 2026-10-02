@@ -82,7 +82,7 @@ export const GLOSSARY = {
   'probe-only': {
     term: 'probe only',
     short: 'A single sample, because repeating it was too expensive.',
-    detail: 'Some strategies take over a minute per query at the largest DOM size. Sampling those properly would cost more wall clock than the rest of the study, so one probe is recorded and flagged \u2014 n=1 is never presented as though it were n=30.',
+    detail: 'Some strategies take over a minute per query at the largest DOM size. Sampling those properly would cost more wall clock than the rest of the study, so one probe is recorded and flagged \u2014 n=1 is never presented as though it were n=8.',
   },
   'budget-limited': {
     term: 'budget limited',

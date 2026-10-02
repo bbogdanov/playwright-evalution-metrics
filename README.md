@@ -224,15 +224,22 @@ The parts that decide whether the numbers mean anything:
   right-skewed; a mean reports the outliers.
 - **Mann-Whitney U** (tie-corrected) and bootstrap median CIs for pairwise claims.
   Nothing here is normally distributed.
-- **Adaptive repetition budget.** Costs span seven orders of magnitude, so a fixed
-  repetition count either starves cheap cells or spends twenty minutes on one
-  expensive cell. A probe sets the count to fit a time budget; cells above a
-  per-tier threshold record the probe alone, flagged `probeOnly` so `n=1` is never
-  presented as if it were `n=30`.
+- **At most 10 runs of anything on a static page** (`MAX_RUNS` in
+  `e2e/harness/measure.ts`). The probe, the warm-up and the samples all count, so
+  a paired measurement records 8 samples; the noise floor runs 4 pairs after one
+  warm-up. Re-querying an unchanging page hundreds of times measures the same
+  thing again; the price of the cap is a wider noise floor, which the verdicts use
+  as is. The exception is S3, where the list re-renders while it is clicked. A
+  probe can still lower the count to fit a time budget (never below 5), and cells
+  above a per-tier threshold record the probe alone, flagged `probeOnly` so `n=1`
+  is never presented as if it were `n=8`.
 - **Raw per-repetition samples are persisted**, not summaries. The analysis can be
   changed, or disagreed with, without re-running anything.
 - **Native-DOM floors** are captured alongside, separating Playwright's engine
-  overhead from the cost of the query itself. For the role and text families no
+  overhead from the cost of the query itself. Ten runs are timed as one batch in
+  the page; Chrome rounds its clock to 0.1 ms there, so a batch under 1 ms is
+  recorded as below timer resolution rather than as a number that is mostly
+  rounding. For the role and text families no
   native equivalent exists, which is the explanation for their numbers.
 - **Mechanism, not just duration.** A Chrome trace counts the timeline events each
   query produces, so claims about *why* something is slow are counted rather than

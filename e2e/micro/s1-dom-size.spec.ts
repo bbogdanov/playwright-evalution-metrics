@@ -36,10 +36,10 @@ const COLS = 6;
  * the run is reproducible.
  */
 const TIERS = [
-  { name: 'xs', rows: 20, reps: 40, probeOnlyAbove: 10_000 },
-  { name: 's', rows: 200, reps: 40, probeOnlyAbove: 10_000 },
-  { name: 'm', rows: 1_500, reps: 30, probeOnlyAbove: 5_000 },
-  { name: 'l', rows: 6_000, reps: 15, probeOnlyAbove: 3_000 },
+  { name: 'xs', rows: 20, probeOnlyAbove: 10_000 },
+  { name: 's', rows: 200, probeOnlyAbove: 10_000 },
+  { name: 'm', rows: 1_500, probeOnlyAbove: 5_000 },
+  { name: 'l', rows: 6_000, probeOnlyAbove: 3_000 },
 ] as const;
 
 for (const tier of TIERS) {
@@ -65,7 +65,7 @@ for (const tier of TIERS) {
     for (const strategy of applicable(target)) {
       await bench.measureStrategy({
         strategy, target, dims,
-        options: { reps: tier.reps, probeOnlyAboveMs: tier.probeOnlyAbove },
+        options: { probeOnlyAboveMs: tier.probeOnlyAbove },
       });
       await bench.measureFloor(strategy, target, dims);
     }
@@ -90,7 +90,7 @@ for (const tier of TIERS) {
         strategy, target,
         dims: { ...dims, op: 'resolveFirst' },
         options: {
-          reps: tier.reps, op: 'resolveFirst', probeOnlyAboveMs: tier.probeOnlyAbove,
+          op: 'resolveFirst', probeOnlyAboveMs: tier.probeOnlyAbove,
         },
         metric: 'resolve_first_ms',
       });

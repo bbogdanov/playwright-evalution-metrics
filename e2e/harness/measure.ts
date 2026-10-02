@@ -33,8 +33,13 @@ export const BASELINE_SELECTOR = 'html';
 
 export interface MeasureOptions {
   /** Upper bound on repetitions. The time budget may reduce it. */
+  /** Upper bound on recorded samples; never above MAX_SAMPLES. */
   readonly reps?: number;
-  readonly warmup?: number;
+  /**
+   * The caller already executed the locator once (to count its matches), which
+   * did the warm-up's job. The warm-up is skipped so the total stays at MAX_RUNS.
+   */
+  readonly warmedUp?: boolean;
   /** Work performed per repetition. `count` resolves every match. */
   readonly op?: 'count' | 'resolveFirst';
   /**
@@ -65,14 +70,28 @@ export interface MeasureOptions {
   readonly probeOnlyAboveMs?: number;
 }
 
+/**
+ * The most times any one operation runs per measurement on a static page,
+ * counting the probe and warm-up as well as the recorded samples.
+ *
+ * The pages measured here do not change between repetitions, so repeating the
+ * same query hundreds of times re-measures the same thing and buys nothing but
+ * wall clock. Ten executions give a median of eight; the cost is a wider noise
+ * floor, which the analysis reports rather than hides. The one exception is a
+ * page whose content changes asynchronously while it is measured (S3 churn),
+ * where each repetition genuinely observes a different DOM.
+ */
+export const MAX_RUNS = 10;
+
+/** Probe and warm-up executions that precede the samples inside MAX_RUNS. */
+const PROBE_RUNS = 1;
+const WARMUP_RUNS = 1;
+
+/** Recorded samples per paired measurement: what is left of MAX_RUNS. */
+export const MAX_SAMPLES = MAX_RUNS - PROBE_RUNS - WARMUP_RUNS;
+
 /** Below this, a median is not worth reporting at all. */
 export const MIN_REPS = 5;
-
-/** A probe under this is cheap enough that sampling it heavily costs nothing. */
-export const CHEAP_QUERY_MS = 5;
-
-/** Sample ceiling for cheap queries. Chosen so the noise floor is sub-0.2ms. */
-export const CHEAP_MAX_REPS = 200;
 
 async function runOp(locator: Locator, op: 'count' | 'resolveFirst'): Promise<number> {
   if (op === 'count') return locator.count();
@@ -94,8 +113,7 @@ export async function measurePaired(
   locator: Locator,
   options: MeasureOptions = {},
 ): Promise<Paired> {
-  const maxReps = options.reps ?? 40;
-  const requestedWarmup = options.warmup ?? 8;
+  const maxReps = Math.min(options.reps ?? MAX_SAMPLES, MAX_SAMPLES);
   const op = options.op ?? 'count';
   const budgetMs = options.budgetMs ?? 5_000;
   const baselineLocator = page.locator(BASELINE_SELECTOR);
@@ -121,26 +139,15 @@ export async function measurePaired(
     };
   }
 
-  // A cheap query gets the full warm-up; an expensive one cannot afford it.
-  const warmup = probeMs > 50 ? 1 : requestedWarmup;
-  for (let i = 0; i < warmup; i++) {
+  for (let i = 0; i < (options.warmedUp ? 0 : WARMUP_RUNS); i++) {
     await baselineLocator.count();
     await runOp(locator, op);
   }
 
-  // Cheap queries get a much higher ceiling than the requested count.
-  //
-  // The floor below which two medians cannot be separated shrinks with sqrt(n),
-  // and several strategies in the identity family measure well under a
-  // millisecond on a machine whose round-trip jitter is several milliseconds. At
-  // n=30 the whole family collapses into 'indistinguishable', which is a
-  // statement about the sample size rather than about the locators. Sampling a
-  // 0.05ms query 200 times still costs well under the budget, and tightens the
-  // floor by roughly 2.5x.
-  const ceiling = probeMs < CHEAP_QUERY_MS ? Math.max(maxReps, CHEAP_MAX_REPS) : maxReps;
-  const reps = Math.max(
-    MIN_REPS,
-    Math.min(ceiling, Math.floor(budgetMs / Math.max(probeMs, 0.05))),
+  // The budget can only lower the count, never raise it above MAX_SAMPLES.
+  const reps = Math.min(
+    maxReps,
+    Math.max(MIN_REPS, Math.floor(budgetMs / Math.max(probeMs, 0.05))),
   );
 
   const samples: number[] = [];
@@ -165,6 +172,15 @@ export async function measurePaired(
   };
 }
 
+/** Chrome rounds performance.now() to 0.1ms on a page that is not cross-origin isolated. */
+export const TIMER_RESOLUTION_MS = 0.1;
+
+/**
+ * A batch shorter than this many timer ticks is rounding error, not a measurement:
+ * at ten ticks the reading can be off by 10%.
+ */
+const MIN_FLOOR_TICKS = 10;
+
 /**
  * In-page cost of the closest native equivalent, with no Playwright involved.
  *
@@ -173,15 +189,18 @@ export async function measurePaired(
  * either figure alone — and for getByRole there is no native equivalent at all,
  * which is itself the explanation for that strategy's numbers.
  *
- * Repetitions run inside a single evaluate because Chrome clamps
- * performance.now() to 100us granularity; timing one iteration would return zero.
+ * The MAX_RUNS repetitions run inside a single evaluate and are timed as one
+ * batch. Chrome rounds performance.now() to 0.1ms, so a lookup that costs a few
+ * microseconds finishes ten runs inside one tick. Such a batch returns perOpMs
+ * null rather than a number that is mostly rounding: the honest answer is that
+ * the native cost is below what this page's clock can resolve.
  */
 export async function measureInPageFloor(
   page: Page,
   kind: 'id' | 'attr' | 'class' | 'css-chain' | 'xpath' | 'text-scan',
   selector: string,
-  reps = 2000,
-): Promise<{ perOpMs: number; matches: number }> {
+  reps = MAX_RUNS,
+): Promise<{ perOpMs: number | null; totalMs: number; matches: number }> {
   return page.evaluate(
     ({ kind, selector, reps }) => {
       const run = (): number => {
@@ -212,14 +231,19 @@ export async function measureInPageFloor(
         }
       };
 
+      // The first run doubles as the warm-up and the match count.
       const matches = run();
       const t0 = performance.now();
-      for (let i = 0; i < reps; i++) run();
-      const t1 = performance.now();
-      return { perOpMs: (t1 - t0) / reps, matches };
+      for (let i = 1; i < reps; i++) run();
+      const totalMs = performance.now() - t0;
+      return { totalMs, matches, runs: reps - 1 };
     },
     { kind, selector, reps },
-  );
+  ).then(({ totalMs, matches, runs }) => ({
+    totalMs,
+    matches,
+    perOpMs: totalMs >= MIN_FLOOR_TICKS * TIMER_RESOLUTION_MS ? totalMs / runs : null,
+  }));
 }
 
 /**
@@ -273,11 +297,11 @@ export async function timeOnceSettled(
  */
 export async function measureNoiseFloor(
   page: Page,
-  reps = CHEAP_MAX_REPS,
-  warmup = 8,
 ): Promise<{ deltas: number[]; samples: number[] }> {
   const a = page.locator(BASELINE_SELECTOR);
-  for (let i = 0; i < warmup; i++) await a.count();
+  // One warm-up, then pairs: 1 + 2 x 4 = 9 executions, inside MAX_RUNS.
+  const reps = Math.floor((MAX_RUNS - WARMUP_RUNS) / 2);
+  for (let i = 0; i < WARMUP_RUNS; i++) await a.count();
 
   const first: number[] = [];
   const second: number[] = [];
@@ -357,7 +381,7 @@ interface TracingSession {
 export async function measureMechanism(
   page: Page,
   locator: Locator,
-  queries = 10,
+  queries = MAX_RUNS - 2,
 ): Promise<MechanismProfile | null> {
   let cdp: TracingSession;
   try {
@@ -367,8 +391,10 @@ export async function measureMechanism(
   }
 
   try {
+    // The count doubles as the first warm-up; one more, then `queries` traced:
+    // 1 + 1 + 8 = MAX_RUNS executions.
     const matches = await locator.count();
-    for (let i = 0; i < 3; i++) await locator.count(); // warm, outside the trace
+    await locator.count();
 
     const events: TraceEvent[] = [];
     const collect = (e: { value: TraceEvent[] }) => events.push(...e.value);

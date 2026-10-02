@@ -26,6 +26,8 @@ test.use({ scenario: 'S3' });
 
 const ROWS = 300;
 const TARGET = 150;
+// The list re-renders while it is clicked, so each click observes a different
+// DOM: the one scenario MAX_RUNS does not bind. Eight is already below it.
 const CLICKS = 8;
 
 /**

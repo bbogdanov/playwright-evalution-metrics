@@ -41,7 +41,7 @@ for (const enc of ['emulated', 'shadow', 'none'] as const) {
     // Every strategy is attempted, including the ones expected to fail under
     // shadow encapsulation. A recorded zero-match is the finding.
     for (const strategy of applicable(target)) {
-      await bench.measureStrategy({ strategy, target, dims, options: { reps: 30 } });
+      await bench.measureStrategy({ strategy, target, dims, });
     }
 
     // XPath is excluded by `applicable` inside a shadow root because it cannot

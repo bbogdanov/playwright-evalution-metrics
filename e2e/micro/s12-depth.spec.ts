@@ -47,7 +47,7 @@ for (const depth of DEPTHS) {
     for (const strategy of applicable(target)) {
       await bench.measureStrategy({
         strategy, target, dims,
-        options: { reps: 30, probeOnlyAboveMs: 5_000 },
+        options: { probeOnlyAboveMs: 5_000 },
       });
       await bench.measureFloor(strategy, target, dims);
     }
