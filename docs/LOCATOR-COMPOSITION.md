@@ -16,7 +16,7 @@ each one is proved by a scenario rather than asserted here:
   timing in this project.
 - **outcome** - the DON'T is simply wrong. The proof is what it produced.
 
-Proofs below come from run `20261002115310` on Chromium 141.0.7390.37: 13 of 13 patterns.
+Proofs below come from run `20261008110628` on Chromium 141.0.7390.37: 13 of 13 patterns.
 
 ```bash
 npm run bench:patterns   # writes results/composition.json
@@ -210,8 +210,8 @@ document. Scoped to a container it computes one per candidate inside that contai
 test still asserts that the control is reachable by its accessible name - which is the
 thing worth asserting - and stops paying for the rest of the page to be examined.
 
-**Measured** (30,034 elements): 182.0 ms to **20.3 ms**, 8.9 times faster. Same element,
-same accessible name, one paired measurement each.
+**Measured** (30,034 elements): 176.8 ms to **14.2 ms**, 12.5 times faster. Same
+element, same accessible name, one paired measurement each.
 
 `/grid?rows=1500&cols=6&seed=bm-v1`
 
@@ -241,7 +241,7 @@ Three broad steps over a large table is thousands of subqueries; the same three 
 from a container that matches exactly one element is three. The fix is never "stop
 chaining" - it is to make the first step unique.
 
-**Measured** (30,034 elements): 1.68 s to **30.3 ms**, 55.5 times faster. Identical
+**Measured** (30,034 elements): 1.69 s to **15.3 ms**, 110.9 times faster. Identical
 chains, differing only in whether the first step matches one element or every row.
 
 `/grid?rows=1500&cols=6&seed=bm-v1`
@@ -269,7 +269,7 @@ content, and the candidate set is already small. Reaching for it against every r
 table means scanning the text of every row to find the one whose identity you already
 knew. If the container has a test id, use it.
 
-**Measured** (30,034 elements): 107.5 ms to **26.7 ms**, 4.0 times faster. Filtering
+**Measured** (30,034 elements): 124.1 ms to **16.5 ms**, 7.5 times faster. Filtering
 every row against addressing the row directly.
 
 `/grid?rows=1500&cols=6&seed=bm-v1`
@@ -364,7 +364,7 @@ re-runs the query until it matches or gives up. The difference is the difference
 a flaky suite and a slow one, and only one of those is worth having.
 
 **Proved:** count() returned 0 while the control was still 800ms away. Instead,
-toHaveCount(1) retried for 795ms and passed. The control appears 800 ms after the page
+toHaveCount(1) retried for 806ms and passed. The control appears 800 ms after the page
 reports itself rendered.
 
 `/late?lateMode=append&delay=800&rows=200`
@@ -392,7 +392,7 @@ whenever you next use it" - which may now be a different item. Assert the count 
 you must iterate, and address items by identity inside the loop rather than by where
 they were.
 
-**Proved:** items[3] read "v3.0" and then "v3.1" without anything re-reading the list.
+**Proved:** items[3] read "v3.0" and then "v3.2" without anything re-reading the list.
 Instead, an identity locator kept pointing at data-row="3" across the same re-render. A
 list that re-keys every tick, read twice through the same array.
 
@@ -444,7 +444,7 @@ ready immediately, and it fails anyway when CI is loaded. A web-first assertion 
 as soon as the condition holds and waits longer when it has to - faster in the common
 case and more reliable in the bad one. There is no trade-off here to weigh.
 
-**Measured** (223 elements): 3.02 s to **799.0 ms**, 3.8 times faster. Wall clock for
+**Measured** (223 elements): 3.02 s to **802.0 ms**, 3.8 times faster. Wall clock for
 each form, against a control that appears after 800 ms.
 
 `/late?lateMode=append&delay=800&rows=200`
