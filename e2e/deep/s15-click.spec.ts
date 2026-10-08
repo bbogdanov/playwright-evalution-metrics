@@ -38,12 +38,15 @@ for (const depth of [SHALLOW, DEEP]) {
 
       const samples: number[] = [];
       let error: string | null = null;
-      for (let i = 0; i < REPS; i++) {
-        await page.evaluate(() => window.scrollTo(0, 0));
-        const r = await timeOnceSettled(() => locator.click({ timeout: 30_000 }));
-        if (!r.ok) { error = r.error; break; }
-        samples.push(r.ms);
-      }
+      // Grouped, not quieted: see S3 for why the clicks stay instrumented.
+      await test.step(`${REPS} clicks · ${id}`, async () => {
+        for (let i = 0; i < REPS; i++) {
+          await page.evaluate(() => window.scrollTo(0, 0));
+          const r = await timeOnceSettled(() => locator.click({ timeout: 30_000 }));
+          if (!r.ok) { error = r.error; break; }
+          samples.push(r.ms);
+        }
+      }, { box: true });
 
       // Proof the locator lands on the leaf: point the log elsewhere, click once
       // more outside the timing, and read it back.

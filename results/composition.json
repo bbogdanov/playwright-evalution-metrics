@@ -1,6 +1,6 @@
 {
-  "runId": "20261002115310",
-  "generatedAt": "2026-10-02T12:51:47.027Z",
+  "runId": "20261008110628",
+  "generatedAt": "2026-10-08T12:10:06.087Z",
   "browserVersion": "141.0.7390.37",
   "proofs": {
     "fixture.handle": {
@@ -55,8 +55,8 @@
       "kind": "cost",
       "url": "/grid?rows=1500&cols=6&seed=bm-v1",
       "domNodes": 30034,
-      "doMs": 20.344572000205517,
-      "dontMs": 181.98658499959856,
+      "doMs": 14.196097999811172,
+      "dontMs": 176.84822100121528,
       "facts": {
         "role": "button",
         "name": "Status for row 750"
@@ -67,8 +67,8 @@
       "kind": "cost",
       "url": "/grid?rows=1500&cols=6&seed=bm-v1",
       "domNodes": 30034,
-      "doMs": 30.28234399948269,
-      "dontMs": 1680.4218760002404,
+      "doMs": 15.275745999999344,
+      "dontMs": 1693.3211900005117,
       "facts": {
         "chainSteps": 3,
         "broadFirstStep": 1500
@@ -79,8 +79,8 @@
       "kind": "cost",
       "url": "/grid?rows=1500&cols=6&seed=bm-v1",
       "domNodes": 30034,
-      "doMs": 26.738868998363614,
-      "dontMs": 107.53657250013202,
+      "doMs": 16.490945999510586,
+      "dontMs": 124.11007699929178,
       "facts": {
         "candidateRows": 1500
       }
@@ -113,23 +113,23 @@
       "kind": "correctness",
       "url": "/late?lateMode=append&delay=800&rows=200",
       "dont": "count() returned 0 while the control was still 800ms away",
-      "did": "toHaveCount(1) retried for 795ms and passed",
+      "did": "toHaveCount(1) retried for 806ms and passed",
       "facts": {
         "delayMs": 800,
         "countNow": 0,
-        "waitedMs": 795
+        "waitedMs": 806
       }
     },
     "wait.all": {
       "pattern": "wait.all",
       "kind": "correctness",
       "url": "/churn?rows=40&hz=10&trackby=0",
-      "dont": "items[3] read \"v3.0\" and then \"v3.1\" without anything re-reading the list",
+      "dont": "items[3] read \"v3.0\" and then \"v3.2\" without anything re-reading the list",
       "did": "an identity locator kept pointing at data-row=\"3\" across the same re-render",
       "facts": {
         "items": 40,
         "thirdValueThen": "v3.0",
-        "thirdValueNow": "v3.1"
+        "thirdValueNow": "v3.2"
       }
     },
     "wait.snapshot": {
@@ -148,8 +148,8 @@
       "kind": "cost",
       "url": "/late?lateMode=append&delay=800&rows=200",
       "domNodes": 223,
-      "doMs": 799,
-      "dontMs": 3022,
+      "doMs": 802,
+      "dontMs": 3021,
       "facts": {
         "renderDelayMs": 800,
         "sleepMs": 3000
