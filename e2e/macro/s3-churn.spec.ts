@@ -90,23 +90,28 @@ for (const cell of MATRIX) {
       let consecutiveFailures = 0;
       let abandoned = 0;
 
-      for (let i = 0; i < CLICKS; i++) {
-        if (consecutiveFailures >= GIVE_UP_AFTER) {
-          abandoned = CLICKS - i;
-          break;
+      // Grouped under one step per strategy. The clicks stay instrumented, unlike
+      // the query sampling loops: their timings are compared with the other
+      // macro scenarios' clicks, which pay the same per-call overhead.
+      await test.step(`${CLICKS} clicks · ${id}`, async () => {
+        for (let i = 0; i < CLICKS; i++) {
+          if (consecutiveFailures >= GIVE_UP_AFTER) {
+            abandoned = CLICKS - i;
+            break;
+          }
+          const locator = strategy.build(page, target);
+          const { ms, ok, error } = await timeOnceSettled(() =>
+            locator.click({ timeout: CLICK_TIMEOUT_MS }),
+          );
+          samples.push(ms);
+          if (ok) {
+            consecutiveFailures = 0;
+          } else {
+            failures.push(error ?? 'unknown');
+            consecutiveFailures++;
+          }
         }
-        const locator = strategy.build(page, target);
-        const { ms, ok, error } = await timeOnceSettled(() =>
-          locator.click({ timeout: CLICK_TIMEOUT_MS }),
-        );
-        samples.push(ms);
-        if (ok) {
-          consecutiveFailures = 0;
-        } else {
-          failures.push(error ?? 'unknown');
-          consecutiveFailures++;
-        }
-      }
+      }, { box: true });
 
       bench.emitRaw({
         strategyId: id,

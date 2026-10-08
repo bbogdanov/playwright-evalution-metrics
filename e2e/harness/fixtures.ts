@@ -81,7 +81,11 @@ export class Bench {
    * with 40,000 nodes is not as quiet as one with 200.
    */
   async measureNoiseFloor(dims: Dims, reps = 200): Promise<number[]> {
-    const { deltas, samples } = await measureNoiseFloor(this.page, reps);
+    const { deltas, samples } = await base.step(
+      `noise floor · ${reps} pairs`,
+      () => measureNoiseFloor(this.page, reps),
+      { box: true },
+    );
     this.emitRaw({
       strategyId: 'baseline.self', family: 'identity', metric: 'noise_floor_ms',
       dims, samples: deltas, matches: 1,
@@ -134,6 +138,22 @@ export class Bench {
       return null;
     }
 
+    // One report step per measurement, so the match count and the sampling
+    // loop sit under a line that says which strategy they belong to.
+    return base.step(
+      `${metric} · ${strategy.id}`,
+      () => this.measureResolved(strategy, locator, metric, dims, args.options),
+      { box: true },
+    );
+  }
+
+  private async measureResolved(
+    strategy: Strategy,
+    locator: Locator,
+    metric: string,
+    dims: Dims,
+    options: MeasureOptions | undefined,
+  ): Promise<{ matches: number; net: number[] } | null> {
     let matches: number;
     try {
       matches = await locator.count();
@@ -152,7 +172,7 @@ export class Bench {
       return { matches, net: [] };
     }
 
-    const paired = await measurePaired(this.page, locator, args.options);
+    const paired = await measurePaired(this.page, locator, options);
     this.emit({
       strategy, metric,
       // budgetLimited and probeMs travel with the record so the analysis can see
@@ -167,7 +187,7 @@ export class Bench {
       samples: paired.samples, baseline: paired.baseline,
       ok: true, error: null,
       reps: paired.samples.length,
-      warmup: args.options?.warmup ?? 8,
+      warmup: options?.warmup ?? 8,
     });
     return { matches, net: paired.net };
   }
@@ -193,7 +213,11 @@ export class Bench {
     } catch {
       return;
     }
-    const profile = await measureMechanism(this.page, locator, queries);
+    const profile = await base.step(
+      `mechanism · ${strategy.id}`,
+      () => measureMechanism(this.page, locator, queries),
+      { box: true },
+    );
     if (!profile) return;
 
     this.emitRaw({
@@ -221,7 +245,11 @@ export class Bench {
   async measureFloor(strategy: Strategy, target: TargetDescriptor, dims: Dims): Promise<void> {
     const floor = strategy.floor?.(target);
     if (!floor) return;
-    const { perOpMs, matches } = await measureInPageFloor(this.page, floor.kind, floor.selector);
+    const { perOpMs, matches } = await base.step(
+      `in_page_floor_ms · ${strategy.id}`,
+      () => measureInPageFloor(this.page, floor.kind, floor.selector),
+      { box: true },
+    );
     this.emit({
       strategy, metric: 'in_page_floor_ms',
       dims: { ...dims, targetDepth: target.depth },

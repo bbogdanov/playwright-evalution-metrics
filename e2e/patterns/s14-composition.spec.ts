@@ -232,8 +232,10 @@ async function costPair(
   facts?: Record<string, string | number | boolean>,
 ): Promise<{ doMs: number; dontMs: number }> {
   const opts = { reps: 25, warmup: 5, budgetMs: 8_000 };
-  const doPaired = await measurePaired(page, forms.do, opts);
-  const dontPaired = await measurePaired(page, forms.dont, opts);
+  const doPaired = await base.step(`cost · ${pattern} · do`,
+    () => measurePaired(page, forms.do, opts), { box: true });
+  const dontPaired = await base.step(`cost · ${pattern} · dont`,
+    () => measurePaired(page, forms.dont, opts), { box: true });
   const doMs = median(doPaired.net);
   const dontMs = median(dontPaired.net);
 

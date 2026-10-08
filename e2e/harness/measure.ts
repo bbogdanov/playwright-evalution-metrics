@@ -28,6 +28,39 @@ export interface Paired {
 
 const nowMs = () => Number(process.hrtime.bigint()) / 1e6;
 
+/**
+ * Runs a sampling loop without reporting each Playwright call as its own step.
+ *
+ * Every awaited call is otherwise a step in the HTML report. A noise floor is 400
+ * `count()` calls from two lines of this file, and the last full run had 173,467
+ * steps across 80 tests, 97% of them from the loops in this file. That
+ * report could not be read, and every one of those steps was bookkeeping paid
+ * inside the timed region.
+ *
+ * Internal calls skip the test runner's step reporting and the per-call
+ * instrumentation; the protocol round trip and the selector work are unchanged,
+ * and since both halves of a pair run quietly the subtraction still cancels
+ * what is left. Only the paired loops use this. Actions timed on their own keep
+ * their instrumentation, so they stay comparable with each other.
+ *
+ * Calls inside lose Playwright's `locator.count:` prefix on errors; one that
+ * escapes is prefixed with the title below instead.
+ *
+ * `_wrapApiCall` is private. @playwright/test is pinned to an exact version,
+ * so it cannot vanish under a minor upgrade; if it ever does, the loop still
+ * runs, just loudly.
+ */
+export async function quietly<T>(page: Page, fn: () => Promise<T>): Promise<T> {
+  const owner = page as unknown as {
+    _wrapApiCall?: (
+      fn: () => Promise<T>,
+      options: { internal: boolean; title: string },
+    ) => Promise<T>;
+  };
+  if (typeof owner._wrapApiCall !== 'function') return fn();
+  return owner._wrapApiCall(() => fn(), { internal: true, title: 'sampling loop' });
+}
+
 /** The cheapest possible locator: one match, native-simple selector, no filtering. */
 export const BASELINE_SELECTOR = 'html';
 
@@ -93,6 +126,14 @@ export async function measurePaired(
   page: Page,
   locator: Locator,
   options: MeasureOptions = {},
+): Promise<Paired> {
+  return quietly(page, () => measurePairedLoud(page, locator, options));
+}
+
+async function measurePairedLoud(
+  page: Page,
+  locator: Locator,
+  options: MeasureOptions,
 ): Promise<Paired> {
   const maxReps = options.reps ?? 40;
   const requestedWarmup = options.warmup ?? 8;
@@ -276,24 +317,26 @@ export async function measureNoiseFloor(
   reps = CHEAP_MAX_REPS,
   warmup = 8,
 ): Promise<{ deltas: number[]; samples: number[] }> {
-  const a = page.locator(BASELINE_SELECTOR);
-  for (let i = 0; i < warmup; i++) await a.count();
+  return quietly(page, async () => {
+    const a = page.locator(BASELINE_SELECTOR);
+    for (let i = 0; i < warmup; i++) await a.count();
 
-  const first: number[] = [];
-  const second: number[] = [];
-  for (let i = 0; i < reps; i++) {
-    const t0 = nowMs();
-    await a.count();
-    const t1 = nowMs();
-    await a.count();
-    const t2 = nowMs();
-    first.push(t1 - t0);
-    second.push(t2 - t1);
-  }
-  return {
-    deltas: second.map((s, i) => s - first[i]),
-    samples: [...first, ...second],
-  };
+    const first: number[] = [];
+    const second: number[] = [];
+    for (let i = 0; i < reps; i++) {
+      const t0 = nowMs();
+      await a.count();
+      const t1 = nowMs();
+      await a.count();
+      const t2 = nowMs();
+      first.push(t1 - t0);
+      second.push(t2 - t1);
+    }
+    return {
+      deltas: second.map((s, i) => s - first[i]),
+      samples: [...first, ...second],
+    };
+  });
 }
 
 /**
@@ -367,62 +410,70 @@ export async function measureMechanism(
   }
 
   try {
-    const matches = await locator.count();
-    for (let i = 0; i < 3; i++) await locator.count(); // warm, outside the trace
-
-    const events: TraceEvent[] = [];
-    const collect = (e: { value: TraceEvent[] }) => events.push(...e.value);
-    cdp.on('Tracing.dataCollected', collect);
-
-    await cdp.send('Tracing.start', {
-      traceConfig: {
-        includedCategories: ['disabled-by-default-devtools.timeline', 'blink', 'devtools.timeline'],
-      },
-    });
-    for (let i = 0; i < queries; i++) await locator.count();
-    const complete = new Promise<void>((resolve) => cdp.once('Tracing.tracingComplete', resolve));
-    await cdp.send('Tracing.end');
-    await complete;
-    cdp.off('Tracing.dataCollected', collect);
-
-    const byName = new Map<string, { count: number; us: number }>();
-    for (const e of events) {
-      if (e.ph !== 'X' || typeof e.dur !== 'number') continue;
-      const entry = byName.get(e.name) ?? { count: 0, us: 0 };
-      entry.count++;
-      entry.us += e.dur;
-      byName.set(e.name, entry);
-    }
-
-    const sum = (names: string[], field: 'count' | 'us') =>
-      names.reduce((a, n) => a + (byName.get(n)?.[field] ?? 0), 0);
-
-    // Both forced-layout event names describe the same passes, so take the larger
-    // rather than adding them and double counting.
-    const forcedLayouts = Math.max(
-      byName.get(FORCED_LAYOUT_EVENTS[0])?.count ?? 0,
-      byName.get(FORCED_LAYOUT_EVENTS[1])?.count ?? 0,
-    );
-
-    return {
-      queries,
-      matches,
-      forcedLayoutsPerQuery: forcedLayouts / queries,
-      layoutsPerCandidate: matches > 0 ? forcedLayouts / queries / matches : null,
-      gcMsPerQuery: sum(GC_EVENTS, 'us') / 1000 / queries,
-      taskMsPerQuery: (byName.get('RunTask')?.us ?? 0) / 1000 / queries,
-      topEvents: [...byName.entries()]
-        .sort((a, b) => b[1].us - a[1].us)
-        .slice(0, 6)
-        .map(([name, v]) => ({
-          name,
-          countPerQuery: v.count / queries,
-          msPerQuery: v.us / 1000 / queries,
-        })),
-    };
+    return await quietly(page, () => traceQueries(cdp, locator, queries));
   } catch {
     return null;
   } finally {
     await cdp.detach().catch(() => {});
   }
+}
+
+async function traceQueries(
+  cdp: TracingSession,
+  locator: Locator,
+  queries: number,
+): Promise<MechanismProfile> {
+  const matches = await locator.count();
+  for (let i = 0; i < 3; i++) await locator.count(); // warm, outside the trace
+
+  const events: TraceEvent[] = [];
+  const collect = (e: { value: TraceEvent[] }) => events.push(...e.value);
+  cdp.on('Tracing.dataCollected', collect);
+
+  await cdp.send('Tracing.start', {
+    traceConfig: {
+      includedCategories: ['disabled-by-default-devtools.timeline', 'blink', 'devtools.timeline'],
+    },
+  });
+  for (let i = 0; i < queries; i++) await locator.count();
+  const complete = new Promise<void>((resolve) => cdp.once('Tracing.tracingComplete', resolve));
+  await cdp.send('Tracing.end');
+  await complete;
+  cdp.off('Tracing.dataCollected', collect);
+
+  const byName = new Map<string, { count: number; us: number }>();
+  for (const e of events) {
+    if (e.ph !== 'X' || typeof e.dur !== 'number') continue;
+    const entry = byName.get(e.name) ?? { count: 0, us: 0 };
+    entry.count++;
+    entry.us += e.dur;
+    byName.set(e.name, entry);
+  }
+
+  const sum = (names: string[], field: 'count' | 'us') =>
+    names.reduce((a, n) => a + (byName.get(n)?.[field] ?? 0), 0);
+
+  // Both forced-layout event names describe the same passes, so take the larger
+  // rather than adding them and double counting.
+  const forcedLayouts = Math.max(
+    byName.get(FORCED_LAYOUT_EVENTS[0])?.count ?? 0,
+    byName.get(FORCED_LAYOUT_EVENTS[1])?.count ?? 0,
+  );
+
+  return {
+    queries,
+    matches,
+    forcedLayoutsPerQuery: forcedLayouts / queries,
+    layoutsPerCandidate: matches > 0 ? forcedLayouts / queries / matches : null,
+    gcMsPerQuery: sum(GC_EVENTS, 'us') / 1000 / queries,
+    taskMsPerQuery: (byName.get('RunTask')?.us ?? 0) / 1000 / queries,
+    topEvents: [...byName.entries()]
+      .sort((a, b) => b[1].us - a[1].us)
+      .slice(0, 6)
+      .map(([name, v]) => ({
+        name,
+        countPerQuery: v.count / queries,
+        msPerQuery: v.us / 1000 / queries,
+      })),
+  };
 }
